@@ -1,0 +1,24 @@
+name: Preview live soccer rankings
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshot-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Generate separate snapshot
+        run: python tools/live_rankings.py
+      - name: Upload snapshot for inspection (never commit or deploy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: soccer-rankings-preview
+          path: data/live-rankings.json
+          retention-days: 2
