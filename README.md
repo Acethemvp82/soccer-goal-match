@@ -51,3 +51,19 @@ python -m unittest discover -s . -p 'test_analysis.py' -v
 ```
 
 The tests cover odds conversion, starter/substitute roles, future-outcome exclusion, conservative lineup matching, and pregame-result grading. The Streamlit interface is separately smoke-tested with mocked source data before release.
+
+## Competition expansion
+
+The app includes a source-listed catalog of 220 soccer competitions captured from ESPN's league registry. A catalog entry is not a claim of active fixtures, player coverage, or validation. The single-competition browser attempts the selected feed; unavailable or inactive competitions display their coverage limitation. The initial six checked additions are Germany's Bundesliga and 2. Bundesliga, France's Ligue 1, Italy's Serie A, Denmark's Superliga, and Austria's Bundesliga.
+
+A combined daily view loads up to eight chosen competitions at a time. It defaults to the EPL plus those six additions. All player rows supplied by the current squads are retained, including rows with insufficient history and blank estimates; filters can hide them deliberately. This does not guarantee every global player or sportsbook market. League ranks stay within each competition, and cross-league probabilities are not jointly calibrated.
+
+The EPL retains its v2 xG-led model. Added competitions use a separate `3.0-basic` model based on shots/goals and derived regulation minutes, with no invented xG. Completed match histories cover the latest eight matches per team. Goals and shots must be explicitly present. Starter/substitution/red-card events must support minutes reconstruction; ambiguous records are omitted. Late stoppage-time substitutes receive a minimum of one minute. Current rosters are loaded separately; published starting XIs require 11 distinct starter IDs and matching fixture/team IDs.
+
+The basic rate is 70% shot rate converted at the loaded competition's position-specific goals-per-shot rate, plus 30% individual smoothed goals/90. It blends 70% available history and 30% last-five-match history, with a 450-minute positional prior. Recent role mixtures and opponent concession factors are applied as in v2. At least three historical appearances are required for a calculated forecast. There is no xG, penalty-taker, or goalkeeper feature. Rates remain uncalibrated and are not betting recommendations.
+
+Historical checks rebuild target-match forecasts from earlier records only. Current position classifications, the finite history window, roster and source coverage bias, and missing historical injury/lineup/odds data limit interpretation. Source packets, usable histories, failed schedules and missing player entries are reported separately. The source-listed catalog snapshot and `extra-validation.json` are deployed with the source; ordinary use does not silently treat every catalog competition as tested.
+
+Data calls are bounded to four parallel HTTP requests per selected league operation. The schedule browser requests eight individual dates, because ESPN soccer scoreboards reject date-range syntax. Team schedules retrieve season histories, then only the selected recent completed matches are loaded. Current squads/history cache for one hour, scoreboards for five minutes, and pregame summaries for two minutes. Combined view can take several minutes on first use. No combined board is loaded until explicitly requested in its controls.
+
+Basic-league exports include a competition identifier and model version. Upload a single competition's CSV in that league's tracker. No authenticated timestamp or immutable forecast archive is provided; download files to preserve them. The combined export can be filtered to a competition before grading. Existing v2 historical results belong to the EPL alone.

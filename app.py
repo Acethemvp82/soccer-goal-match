@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 from data_source import fetch_board, fetch_history, load_histories, fetch_lineups
 from analysis_tools import enrich_rows, compare_odds, walk_forward, evaluation_summary, grade_snapshot, VERSION
+from league_board import LEAGUES, render_extra, render_combined
 from model import parse_time, rank_slate
 
 ET = ZoneInfo('America/New_York')
@@ -17,7 +18,7 @@ st.set_page_config(page_title='Soccer Goal Match | Ace', page_icon='⚽', layout
 st.markdown('''<style>
 .block-container{padding-top:2rem;max-width:1550px}h1{letter-spacing:-1px}h2{font-size:1.4rem!important}.eyebrow{letter-spacing:2px;color:#90efb1;font-size:11px;font-weight:700}.schedule{display:flex;gap:12px;overflow-x:auto;margin:10px 0 22px;padding-bottom:8px}.match{min-width:200px;padding:16px 20px;background:#111e1d;border:1px solid #294137;border-radius:11px}.match b{font-size:18px}.match small{display:block;color:#a3b8af;margin-top:5px}.legend{display:flex;gap:18px;flex-wrap:wrap;color:#b5c7bd;font-size:12px;margin:10px 0 15px}[data-testid="stMetric"]{background:#111e1d;padding:14px 18px;border-top:2px solid #497458;border-radius:8px}[data-testid="stDataFrame"]{border:1px solid #294137;border-radius:10px}
 </style>''', unsafe_allow_html=True)
-st.markdown('<div class="eyebrow">ACE’S MATCHUP LAB / PREMIER LEAGUE</div>', unsafe_allow_html=True)
+st.markdown('<div class="eyebrow">ACE’S MATCHUP LAB / SOCCER</div>', unsafe_allow_html=True)
 st.title('Soccer Goal Match')
 st.caption('Find the goal threats. Verify the starting XI. Compare the price.')
 
@@ -100,6 +101,10 @@ def style_board(frame):
 def reset_price():
     st.session_state['american_price'] = ''
     st.session_state['void_rule'] = False
+    st.session_state['odds_entered_at'] = None
+
+def record_odds_input():
+    st.session_state['odds_entered_at'] = datetime.now(timezone.utc).isoformat()
 
 def show_odds(rows, stale):
     with st.expander('Odds comparison — enter your current sportsbook price', expanded=True):
@@ -107,10 +112,13 @@ def show_odds(rows, stale):
         if not options:
             st.info('No upgraded estimates are available for odds comparison.')
             return
-        lookup = {str(r['id']) + ':' + str(r['fixture']): r for r in options}
+        lookup = {str(r.get('league', 'eng.1')) + ':' + str(r['id']) + ':' + str(r['fixture']): r for r in options}
         choice = st.selectbox('Player to price', list(lookup), format_func=lambda key: lookup[key]['short'] + ' · ' + lookup[key]['team'] + ' vs ' + lookup[key]['opponent'], key='price_player', on_change=reset_price)
         player = lookup[choice]
-        odds_text = st.text_input('American odds', value='', placeholder='Example: +300 or -110', key='american_price')
+        if st.session_state.get('price_context') != choice:
+            reset_price()
+            st.session_state['price_context'] = choice
+        odds_text = st.text_input('American odds', value='', placeholder='Example: +300 or -110', key='american_price', on_change=record_odds_input)
         void_rule = st.checkbox('I checked that this market voids if the player does not appear', value=False, key='void_rule')
         st.caption('Manual price entry; there is no live sportsbook feed. This estimate is conditional on appearing, so the nonappearance rule matters.')
         if not odds_text.strip():
@@ -129,10 +137,16 @@ def show_odds(rows, stale):
         if low is not None:
             high = player['probabilityHigh']
             st.caption(f'Minutes scenario range: {low:.1%}–{high:.1%}; lower-minutes edge {100*(low-result["breakEven"]):+.1f} pp. This is not a confidence interval.')
-        if void_rule:
-            priced = dict(player, modelVersion=VERSION, americanOdds=float(odds_text), oddsRecordedAt=datetime.now(timezone.utc).isoformat(), nonappearanceRule='void')
+        entered_at = st.session_state.get('odds_entered_at')
+        price_stale = not entered_at or datetime.now(timezone.utc)-parse_time(entered_at) > timedelta(minutes=10)
+        if entered_at:
+            st.caption('Price entered ' + parse_time(entered_at).astimezone(ET).strftime('%I:%M %p ET') + '; check the current sportsbook price again before using it.')
+        if void_rule and not price_stale:
+            priced = dict(player, modelVersion=player.get('modelVersion', VERSION), americanOdds=float(odds_text), oddsRecordedAt=entered_at, nonappearanceRule='void')
             st.download_button('Save priced pregame record', pd.DataFrame([priced]).to_csv(index=False).encode('utf-8-sig'), file_name='soccer-priced-pregame-record.csv', mime='text/csv')
-        if not void_rule:
+        if price_stale:
+            st.warning('Re-enter the current price: its entry time is missing or more than ten minutes old.')
+        elif not void_rule:
             st.warning('Wait: the market nonappearance rule has not been confirmed.')
         elif stale or player.get('readiness') != 'Inputs checked — unvalidated':
             st.warning('Watch only: ' + player.get('readiness', 'Inputs not verified'))
@@ -215,8 +229,32 @@ def show_evaluation(board, players):
             st.info('There are not enough usable completed fixtures and prior histories for this diagnostic yet.')
 
 
+def epl_daily_rows(date):
+    board=load_live_board()
+    now=datetime.now(timezone.utc)
+    games=[f for f in board['_fixtures'] if not f.get('started') and not f.get('finished') and f.get('kickoff_time') and parse_time(f['kickoff_time'])>now and local_day(f['kickoff_time'])==date]
+    ids={g['id'] for g in games}
+    rows=[r for r in board['rows'] if r['fixture'] in ids]
+    players=board['_bootstrap']['elements']
+    histories,failures=load_histories(sorted({r['id'] for r in rows if r['seasonMinutes']>0}),loader=load_player_history)
+    near=[g for g in games if parse_time(g['kickoff_time'])-now<=timedelta(minutes=90)]
+    teams={t['id']:t for t in board['_bootstrap']['teams']}
+    lineups=load_match_lineups(near,players,teams)['mapping'] if near else {}
+    calculation_time=datetime.now(timezone.utc)
+    return [dict(r,league='eng.1',sourceAsOf=board['asOf'],modelBasis='EPL xG-led') for r in enrich_rows([r for r in rows if parse_time(r['kickoff'])>calculation_time],players,histories,lineups,calculation_time)]
+
 @st.fragment(run_every='2m')
 def dashboard():
+    view=st.radio('Board view',['Single league','Combined daily board'],horizontal=True,key='board_view')
+    if view=='Combined daily board':
+        render_combined(style_board,show_odds,epl_daily_rows)
+        return
+    league_names={'eng.1':'English Premier League',**LEAGUES}
+    code=st.selectbox('League / competition',list(league_names),format_func=lambda k:league_names[k],key='league_selection')
+    st.caption(f'{len(league_names)} source-listed competitions. A listing does not guarantee current fixtures, player coverage or validated scoring estimates.')
+    if code!='eng.1':
+        render_extra(code,style_board,show_odds)
+        return
     if st.button('↻ Refresh data'):
         load_live_board.clear()
         load_match_lineups.clear()
@@ -298,7 +336,7 @@ def dashboard():
         'Final Anytime': st.column_config.NumberColumn(help='Unvalidated scoring chance conditional on appearing; recent-five-game form and starter/substitute minutes mixture. Excludes extra time.', format='%.1f%%'),
         'Lineup': st.column_config.TextColumn(help='Confirmed only when ESPN reports a complete XI for the matched fixture and the player matches unambiguously. Available does not mean starting.')})
     st.caption('Select a player’s row to inspect their scoring inputs. Ranks remain unchanged when filtering.')
-    export = pd.DataFrame([dict(r, matchDate=str(selected_date), sourceAsOf=board['asOf']) for r in visible if r['probability'] is not None]).drop(columns=['rate'], errors='ignore')
+    export = pd.DataFrame([dict(r, league='eng.1', matchDate=str(selected_date), sourceAsOf=board['asOf']) for r in visible if r['probability'] is not None]).drop(columns=['rate'], errors='ignore')
     st.download_button('Export pregame board ↓', export.to_csv(index=False).encode('utf-8-sig'), file_name=f'soccer-goal-match-{selected_date}.csv', mime='text/csv', disabled=export.empty)
     st.caption('Pregame exports include calculated forecasts only; rows without an estimate are excluded.')
     show_odds(visible, bool(warning))

@@ -232,7 +232,7 @@ def grade_snapshot(frame, histories, fixtures):
             probability=float(record['probability'])
             if not math.isfinite(probability) or not 0<=probability<=1:
                 raise ValueError('Invalid probability')
-            if str(record['modelVersion']) not in ('2','2.0'):
+            if str(record['modelVersion']) not in ('2','2.0','3.0-basic'):
                 raise ValueError('Unsupported model version')
         except (ValueError,TypeError,OverflowError) as exc:
             raise ValueError(f'Invalid export row: {exc}') from exc

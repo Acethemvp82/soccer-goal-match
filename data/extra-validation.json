@@ -1,0 +1,134 @@
+{
+  "ger.1": {
+    "asOf": "2026-10-23T12:28:06.000354+00:00",
+    "name": "German Bundesliga",
+    "requestedMatches": 54,
+    "loadedMatches": 54,
+    "missingEntries": 0,
+    "scheduleErrors": 0,
+    "players": 54,
+    "estimates": 24,
+    "summary": {
+      "observations": 362,
+      "fixtures": 27,
+      "scored": 42,
+      "meanPrediction": 0.12590308082497983,
+      "actualRate": 0.11602209944751381,
+      "brier": 0.0972519289311022,
+      "baselineBrier": 0.09761826211929428,
+      "logLoss": 0.33676609432913107,
+      "fixtureBootstrap95Low": -0.003252485187360433,
+      "fixtureBootstrap95High": 0.004482304337811757
+    }
+  },
+  "ger.2": {
+    "asOf": "2026-10-23T12:28:06.265436+00:00",
+    "name": "German 2. Bundesliga",
+    "requestedMatches": 72,
+    "loadedMatches": 72,
+    "missingEntries": 0,
+    "scheduleErrors": 0,
+    "players": 109,
+    "estimates": 54,
+    "summary": {
+      "observations": 657,
+      "fixtures": 45,
+      "scored": 73,
+      "meanPrediction": 0.13145885281344005,
+      "actualRate": 0.1111111111111111,
+      "brier": 0.09312950867387401,
+      "baselineBrier": 0.09395660200055105,
+      "logLoss": 0.3245086132326682,
+      "fixtureBootstrap95Low": -0.0019942929380616253,
+      "fixtureBootstrap95High": 0.0037449895557010162
+    }
+  },
+  "fra.1": {
+    "asOf": "2026-10-23T12:28:07.636292+00:00",
+    "name": "French Ligue 1",
+    "requestedMatches": 63,
+    "loadedMatches": 63,
+    "missingEntries": 0,
+    "scheduleErrors": 0,
+    "players": 50,
+    "estimates": 22,
+    "summary": {
+      "observations": 467,
+      "fixtures": 36,
+      "scored": 46,
+      "meanPrediction": 0.10901027506808177,
+      "actualRate": 0.09850107066381156,
+      "brier": 0.08512191688124325,
+      "baselineBrier": 0.08501676596497305,
+      "logLoss": 0.29501571197097093,
+      "fixtureBootstrap95Low": -0.0036418782692517696,
+      "fixtureBootstrap95High": 0.0038917699224206297
+    }
+  },
+  "ita.1": {
+    "asOf": "2026-10-23T12:28:08.037846+00:00",
+    "name": "Italian Serie A",
+    "requestedMatches": 70,
+    "loadedMatches": 70,
+    "missingEntries": 0,
+    "scheduleErrors": 0,
+    "players": 57,
+    "estimates": 25,
+    "summary": {
+      "observations": 497,
+      "fixtures": 40,
+      "scored": 53,
+      "meanPrediction": 0.09645435450741076,
+      "actualRate": 0.10663983903420524,
+      "brier": 0.08794505784678493,
+      "baselineBrier": 0.09031184815108116,
+      "logLoss": 0.30929400871678525,
+      "fixtureBootstrap95Low": -0.0004858630369875445,
+      "fixtureBootstrap95High": 0.005559245093302455
+    }
+  },
+  "den.1": {
+    "asOf": "2026-10-23T12:28:08.889509+00:00",
+    "name": "Danish Superliga",
+    "requestedMatches": 50,
+    "loadedMatches": 50,
+    "missingEntries": 0,
+    "scheduleErrors": 0,
+    "players": 52,
+    "estimates": 24,
+    "summary": {
+      "observations": 457,
+      "fixtures": 32,
+      "scored": 57,
+      "meanPrediction": 0.11805662038650866,
+      "actualRate": 0.12472647702407003,
+      "brier": 0.10579885840684165,
+      "baselineBrier": 0.10481195227947646,
+      "logLoss": 0.3595347481214169,
+      "fixtureBootstrap95Low": -0.0038845333296799495,
+      "fixtureBootstrap95High": 0.0019682803905902257
+    }
+  },
+  "aut.1": {
+    "asOf": "2026-10-23T12:28:09.004969+00:00",
+    "name": "Austrian Bundesliga",
+    "requestedMatches": 48,
+    "loadedMatches": 48,
+    "missingEntries": 0,
+    "scheduleErrors": 0,
+    "players": 54,
+    "estimates": 26,
+    "summary": {
+      "observations": 414,
+      "fixtures": 32,
+      "scored": 45,
+      "meanPrediction": 0.11346556565083796,
+      "actualRate": 0.10869565217391304,
+      "brier": 0.09436170854486119,
+      "baselineBrier": 0.09586283899386047,
+      "logLoss": 0.33453419186686434,
+      "fixtureBootstrap95Low": -0.0010297285066778801,
+      "fixtureBootstrap95High": 0.004214952519895018
+    }
+  }
+}
