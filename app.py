@@ -48,11 +48,43 @@ def get_data():
         return None, 'Official FPL data could not be loaded. Refresh to retry. No current estimates are available.'
 
 COLORS = {'Strongest': ('#214d35', '#9cf2b6'), 'Strong': ('#45412a', '#f0dc94'), 'Moderate': ('#493628', '#efb68d')}
+NEUTRAL = ('#24352e', '#acbdb4')
+WEAK = ('#4b292c', '#f3a8ac')
+
+def rating_colors(value, column):
+    if pd.isna(value):
+        return NEUTRAL
+    if column == 'Goal Threat':
+        if value >= 80:
+            return COLORS['Strongest']
+        if value >= 60:
+            return COLORS['Strong']
+        if value >= 40:
+            return COLORS['Moderate']
+        return WEAK
+    if value >= 60:
+        return COLORS['Strongest']
+    if value >= 55:
+        return COLORS['Strong']
+    if value >= 45:
+        return NEUTRAL
+    if value >= 40:
+        return COLORS['Moderate']
+    return WEAK
 
 def style_board(frame):
     def style_row(row):
-        bg, fg = COLORS.get(row['Scoring outlook'], ('#24352e', '#acbdb4'))
-        return [f'background-color:{bg};color:{fg};font-weight:700' if col in ('Final Anytime', 'Scoring outlook') else '' for col in frame.columns]
+        styles = []
+        for column in frame.columns:
+            if column in ('Goal Threat', 'Goal Match'):
+                bg, fg = rating_colors(row[column], column)
+            elif column in ('Final Anytime', 'Scoring outlook'):
+                bg, fg = COLORS.get(row['Scoring outlook'], NEUTRAL)
+            else:
+                styles.append('')
+                continue
+            styles.append(f'background-color:{bg};color:{fg};font-weight:700')
+        return styles
     return frame.style.apply(style_row, axis=1).format(precision=0, na_rep='—')
 
 @st.fragment(run_every='10m')
@@ -93,6 +125,7 @@ def dashboard():
     m2.metric('Strongest candidates', sum(r['outlook'] == 'Strongest' for r in visible))
     m3.metric('Matches', len(selected_fixtures))
     st.markdown('<div class="legend"><span>🟢 Strongest ≥35%</span><span>🟡 Strong 20–34.9%</span><span>🟠 Moderate 10–19.9%</span><span>⚪ Low / limited data</span></div>', unsafe_allow_html=True)
+    st.caption('Goal Threat: green 80+ · yellow 60–79 · orange 40–59 · red below 40. Goal Match: green 60+ · yellow 55–59 · gray 45–54 (neutral) · orange 40–44 · red below 40. These rating colors use separate scales from Final Anytime.')
     if not visible:
         st.info('No players match these filters. Try another team, position, or date.')
         return
@@ -105,8 +138,8 @@ def dashboard():
         'Team rank': st.column_config.NumberColumn(help='Rank within the player’s team for this fixture.', format='%d'),
         'Player': st.column_config.TextColumn(width='medium', help='Select this row to view the player’s scoring inputs below.'),
         'Position': st.column_config.TextColumn(help='FPL classifications: FWD, MID, DEF. These are not precise tactical roles.'),
-        'Goal Threat': st.column_config.NumberColumn(help='Percentile of smoothed xG per 90 among upcoming outfield players. Not a probability.', format='%d'),
-        'Goal Match': st.column_config.NumberColumn(help='Opponent concession factor. 50 is neutral; higher is more favorable.', format='%d'),
+        'Goal Threat': st.column_config.NumberColumn(help='Percentile of smoothed xG per 90. Green 80+, yellow 60–79, orange 40–59, red below 40. Not a probability.', format='%d'),
+        'Goal Match': st.column_config.NumberColumn(help='Opponent concession factor. 50 is neutral. Green 60+, yellow 55–59, gray 45–54, orange 40–44, red below 40.', format='%d'),
         'Est. minutes': st.column_config.NumberColumn(help='Season minutes divided by completed league matches for the current team, capped at 90. Not a confirmed starting projection.', format='%d'),
         'Final Anytime': st.column_config.NumberColumn(help='Unvalidated estimated chance of at least one goal in regulation plus stoppage time.', format='%.1f%%'),
         'Lineup': st.column_config.TextColumn(help='This source does not supply confirmed starting XIs here. Available does not mean starting.')})
