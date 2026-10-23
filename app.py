@@ -124,7 +124,7 @@ def show_odds(rows, stale):
         a.metric('Book break-even', f'{result["breakEven"]:.1%}')
         b.metric('Model estimate', f'{player["probability"]:.1%}')
         c.metric('Model-only edge', f'{result["edge"]*100:+.1f} pp')
-        st.write(f'Model-only expected return per $1: **${result["expectedReturn"]:+.2f}** · Model fair decimal price: **{result["fairDecimal"]:.2f}**' if result['fairDecimal'] else 'Model scoring estimate is zero.')
+        st.write(f'Model-only expected return per unit staked: **{result["expectedReturn"]:+.2f} units** · Model fair decimal price: **{result["fairDecimal"]:.2f}**' if result['fairDecimal'] else 'Model scoring estimate is zero.')
         low = player.get('probabilityLow')
         if low is not None:
             high = player['probabilityHigh']
@@ -167,7 +167,7 @@ def show_evaluation(board, players):
                 if 'Paper return / $1' in graded and graded['Paper return / $1'].notna().any():
                     priced_results = graded[graded['Paper return / $1'].notna() & graded['Scored'].notna()]
                     if len(priced_results):
-                        st.write(f'Paper result at manually recorded prices: **${priced_results["Paper return / $1"].sum():+.2f}** over **{len(priced_results)}** $1 observations. These are not verified placed wagers or independent historical odds.')
+                        st.write(f'Paper result at manually recorded prices: **{priced_results["Paper return / $1"].sum():+.2f} units** over **{len(priced_results)}** one-unit observations. These are not verified placed wagers or independent historical odds.')
                 st.download_button('Download graded results', graded.to_csv(index=False).encode('utf-8-sig'), file_name='soccer-goal-match-results.csv', mime='text/csv')
                 st.caption('DNPs are excluded. Capture timestamps are supplied by the CSV, not independently verified. These results do not establish real-world profitability.')
             except (ValueError, KeyError, TypeError) as exc:
