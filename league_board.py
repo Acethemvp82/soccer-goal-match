@@ -10,6 +10,7 @@ import streamlit as st
 from data_source import fetch_url
 from extra_leagues import BASE, LEAGUES, BASIC_VERSION, fetch_schedule, fetch_context, make_board, current_lineups, diagnostic
 from model import parse_time
+from rankings import prepare_rankings, ranking_controls, order_rankings
 from analysis_tools import evaluation_summary, grade_snapshot
 
 ET=ZoneInfo('America/New_York')
@@ -56,12 +57,14 @@ def slate_data(code,date):
 def board_frame(rows,combined=False):
     records=[]
     for r in rows:
-        record={'League':LEAGUES.get(r.get('league'), 'English Premier League'),'League rank':r.get('overallRank'),'Team rank':r.get('teamRank'),'Player':r['short'],'Position':r['position'],'Team':r['team'],'Opponent':r['opponent']+(' (H)' if r['home'] else ' (A)'),'Goal Threat':r['goalThreat'],'Goal Match':r['goalMatch'],'Est. minutes':r['minutes'],'Final Anytime':r['probability']*100 if r['probability'] is not None else None,'Scoring outlook':r['outlook'],'Lineup':r['lineup'],'Checks':r['readiness'],'Model':r.get('modelBasis','EPL xG-led')}
+        record={'League':LEAGUES.get(r.get('league'), 'English Premier League'),'League rank':r.get('overallRank'),'Rank change':r.get('rankChange'),'Team rank':r.get('teamRank'),'Position rank':r.get('positionRank'),'Player':r['short'],'Position':r['position'],'Team':r['team'],'Opponent':r['opponent']+(' (H)' if r['home'] else ' (A)'),'Goal Threat':r['goalThreat'],'Goal Match':r['goalMatch'],'Est. minutes':r['minutes'],'Final Anytime':r['probability']*100 if r['probability'] is not None else None,'Scoring outlook':r['outlook'],'Lineup':r['lineup'],'Checks':r['readiness'],'Model':r.get('modelBasis','EPL xG-led')}
         if not combined:record.pop('League')
         records.append(record)
     return pd.DataFrame(records)
 
 def render_rows(rows,style_board,show_odds,key,combined=False):
+    rows=prepare_rankings(rows)
+    ranking_order,ranking_limit=ranking_controls(key)
     teams=sorted({r['team'] for r in rows});a,b,c=st.columns([1,1,2])
     team=a.selectbox('Team',['All teams']+teams,key=key+'team')
     position=b.selectbox('Position',['All outfield','FWD','MID','DEF','Unknown'],key=key+'position')
@@ -69,6 +72,7 @@ def render_rows(rows,style_board,show_odds,key,combined=False):
     starter=st.checkbox('Confirmed starters only',key=key+'starters')
     available=st.checkbox('No injury flag only',value=True,key=key+'availability')
     visible=[r for r in rows if (team=='All teams' or r['team']==team) and (position=='All outfield' or r['position']==position) and search.casefold() in r['name'].casefold() and (not starter or r['lineup']=='Confirmed starter') and (not available or r['available'])]
+    visible=order_rankings(visible,ranking_order,ranking_limit)
     a,b,c=st.columns(3);a.metric('Outfield players',len({(r.get('league'),r['id']) for r in visible}));b.metric('Calculated forecasts',sum(r['probability'] is not None for r in visible));c.metric('Confirmed starters',sum(r['lineup']=='Confirmed starter' for r in visible))
     st.caption('Goal Threat: green 80+, yellow 60–79, orange 40–59, red below 40. Goal Match: green 60+, yellow 55–59, gray 45–54, orange 40–44, red below 40. Final Anytime colors retain the existing scoring bands; they do not establish betting value.')
     if not visible:
@@ -96,7 +100,7 @@ def render_extra(code,style_board,show_odds):
     st.subheader(LEAGUES[code])
     st.info('Separate basic model: shots and goals, without xG. Player coverage varies by competition. Missing estimates stay blank; EPL validation does not transfer to this model.')
     if st.button('↻ Refresh league data',key='refresh_extra'):
-        load_schedule.clear();load_pregame_summary.clear();load_roster.clear()
+        load_schedule.clear();load_pregame_summary.clear();load_roster.clear();load_context.clear()
     try:
         schedule=load_schedule(code,datetime.now(ET).date().isoformat())
         now=datetime.now(timezone.utc)

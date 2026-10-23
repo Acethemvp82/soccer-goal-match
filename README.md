@@ -67,3 +67,10 @@ Historical checks rebuild target-match forecasts from earlier records only. Curr
 Data calls are bounded to four parallel HTTP requests per selected league operation. The schedule browser requests eight individual dates, because ESPN soccer scoreboards reject date-range syntax. Team schedules retrieve season histories, then only the selected recent completed matches are loaded. Current squads/history cache for one hour, scoreboards for five minutes, and pregame summaries for two minutes. Combined view can take several minutes on first use. No combined board is loaded until explicitly requested in its controls.
 
 Basic-league exports include a competition identifier and model version. Upload a single competition's CSV in that league's tracker. No authenticated timestamp or immutable forecast archive is provided; download files to preserve them. The combined export can be filtered to a competition before grading. Existing v2 historical results belong to the EPL alone.
+
+
+## Live pregame rankings
+
+The open board recalculates every two minutes. League, team and position ranks use available players with a calculated Final Anytime estimate, before filters. Sort by Final Anytime, Goal Threat or Goal Match; top-10/top-25 views select the Final Anytime ranks within each league. Combined leagues retain independent ranks.
+
+Rank movement compares changed input snapshots in the current browser session. Widget reruns preserve the last movement; a new session or changed fixture set starts a new comparison. No historical movement database is implied. The board calculation time is separate from source timestamps/cache ages. Automatic reruns respect existing feed caches; the single-league refresh button forces current histories as well as lineups/squads. These are pregame rankings, with started fixtures removed; no in-play scoring model is supplied.

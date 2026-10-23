@@ -11,6 +11,7 @@ from data_source import fetch_board, fetch_history, load_histories, fetch_lineup
 from analysis_tools import enrich_rows, compare_odds, walk_forward, evaluation_summary, grade_snapshot, VERSION
 from league_board import LEAGUES, render_extra, render_combined
 from model import parse_time, rank_slate
+from rankings import prepare_rankings, ranking_controls, order_rankings
 
 ET = ZoneInfo('America/New_York')
 ROOT = Path(__file__).resolve().parent
@@ -258,6 +259,7 @@ def dashboard():
     if st.button('↻ Refresh data'):
         load_live_board.clear()
         load_match_lineups.clear()
+        load_player_history.clear()
     with st.spinner('Loading official Premier League data…'):
         board, warning = get_data()
     if warning:
@@ -303,7 +305,8 @@ def dashboard():
         slate = rank_slate([dict(r, probability=None, minutes=None, readiness='Live history unavailable — wait', historyStatus='Missing', modelVersion=VERSION) for r in slate])
         st.warning('Saved v1 data lacks current player histories. Upgraded estimates require the live FPL feed.')
     st.info('Research model · Scoring estimates are conditional on the player appearing. Colors do not establish betting value. Calibration and profitability remain unproven.')
-    st.subheader('Anytime goal scorer board')
+    slate = prepare_rankings(slate)
+    ranking_order, ranking_limit = ranking_controls('epl_')
     c1, c2, c3, c4 = st.columns([1, 1, 2, 1.5])
     team = c1.selectbox('Team', ['All teams'] + sorted({r['team'] for r in slate}), key='team_filter')
     position = c2.selectbox('Position', ['All outfield', 'FWD', 'MID', 'DEF'])
@@ -311,6 +314,7 @@ def dashboard():
     available_only = c4.checkbox('Available players only', value=True)
     confirmed_only = st.checkbox('Confirmed starters only', value=False, help='Shows only players matched to a published starting XI; it can be empty before team news.')
     visible = [r for r in slate if (not available_only or r['available']) and (team == 'All teams' or r['team'] == team) and (position == 'All outfield' or r['position'] == position) and search.casefold() in r['name'].casefold() and (not confirmed_only or r['lineup'] == 'Confirmed starter')]
+    visible = order_rankings(visible, ranking_order, ranking_limit)
     m1, m2, m3 = st.columns(3)
     m1.metric('Outfield players', len({r['id'] for r in visible}))
     m2.metric('Strongest candidates', sum(r['outlook'] == 'Strongest' for r in visible))
@@ -323,10 +327,11 @@ def dashboard():
         return
     records = []
     for r in visible:
-        records.append({'Overall': r['overallRank'], 'Team rank': r['teamRank'], 'Player': r['short'], 'Position': r['position'], 'Team': r['team'], 'Opponent': r['opponent'] + (' (H)' if r['home'] else ' (A)'), 'Goal Threat': r['goalThreat'], 'Goal Match': r['goalMatch'], 'Est. minutes': r['minutes'], 'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None, 'Scoring outlook': r['outlook'], 'Availability': r['availability'], 'Lineup': r['lineup'], 'Checks': r.get('readiness', 'Await checks'), 'Recent starts': str(r.get('recentStarts', '—')) + '/' + str(r.get('recentGames', '—'))})
+        records.append({'League rank': r['overallRank'], 'Rank change': r['rankChange'], 'Team rank': r['teamRank'], 'Position rank': r.get('positionRank'), 'Player': r['short'], 'Position': r['position'], 'Team': r['team'], 'Opponent': r['opponent'] + (' (H)' if r['home'] else ' (A)'), 'Goal Threat': r['goalThreat'], 'Goal Match': r['goalMatch'], 'Est. minutes': r['minutes'], 'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None, 'Scoring outlook': r['outlook'], 'Availability': r['availability'], 'Lineup': r['lineup'], 'Checks': r.get('readiness', 'Await checks'), 'Recent starts': str(r.get('recentStarts', '—')) + '/' + str(r.get('recentGames', '—'))})
     frame = pd.DataFrame(records)
     event = st.dataframe(style_board(frame), hide_index=True, use_container_width=True, height=590, on_select='rerun', selection_mode='single-row', column_config={
-        'Overall': st.column_config.NumberColumn(help='Rank across available players on this date, before search/team/position filters.', format='%d'),
+        'League rank': st.column_config.NumberColumn(help='Rank across available players on this date, before search/team/position filters.', format='%d'),
+        'Position rank': st.column_config.NumberColumn(help='Rank among players with the same position in this league and date, before filters.', format='%d'),
         'Team rank': st.column_config.NumberColumn(help='Rank within the player’s team for this fixture.', format='%d'),
         'Player': st.column_config.TextColumn(width='medium', help='Select this row to view the player’s scoring inputs below.'),
         'Position': st.column_config.TextColumn(help='FPL classifications: FWD, MID, DEF. These are not precise tactical roles.'),

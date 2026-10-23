@@ -84,13 +84,18 @@ def rank_slate(rows):
     """Rank available players before team/position/search filters."""
     rows = sorted((dict(r) for r in rows), key=lambda r: (-(r['probability'] if r['probability'] is not None else -1), r['name']))
     team_counts = defaultdict(int)
-    rank = 0
+    position_counts = defaultdict(int)
+    league_counts = defaultdict(int)
     for row in rows:
-        row['overallRank'] = row['teamRank'] = None
+        row['overallRank'] = row['teamRank'] = row['positionRank'] = None
         if row['available'] and row['probability'] is not None:
-            rank += 1
-            team_key = (row['team'], row['fixture'])
+            league = row.get('league', 'eng.1')
+            league_counts[league] += 1
+            team_key = (league, row['team'], row['fixture'])
+            position_key = (league, row['position'])
+            position_counts[position_key] += 1
             team_counts[team_key] += 1
-            row['overallRank'], row['teamRank'] = rank, team_counts[team_key]
+            row['overallRank'], row['teamRank'] = league_counts[league], team_counts[team_key]
+            row['positionRank'] = position_counts[position_key]
         row['outlook'] = scoring_outlook(row)
     return rows
