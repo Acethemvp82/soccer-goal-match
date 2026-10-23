@@ -1,0 +1,51 @@
+{
+  "version": "2.0",
+  "asOf": "2026-10-23T11:54:35.271176+00:00",
+  "requested": 424,
+  "failed": 0,
+  "summary": {
+    "observations": 1059,
+    "fixtures": 40,
+    "scored": 99,
+    "meanPrediction": 0.09626095001794605,
+    "actualRate": 0.09348441926345609,
+    "brier": 0.07849222063573956,
+    "baselineBrier": 0.08198186163181999,
+    "logLoss": 0.2861853467375525,
+    "fixtureBootstrap95Low": 0.00017413724683726408,
+    "fixtureBootstrap95High": 0.006725009694058349
+  },
+  "bins": [
+    {
+      "Band": "(-0.001, 0.1]",
+      "Count": 699,
+      "Predicted": 0.04991224957055314,
+      "Actual": 0.05007153075822604
+    },
+    {
+      "Band": "(0.1, 0.2]",
+      "Count": 245,
+      "Predicted": 0.13739704885565807,
+      "Actual": 0.1469387755102041
+    },
+    {
+      "Band": "(0.2, 0.35]",
+      "Count": 96,
+      "Predicted": 0.2620362574000671,
+      "Actual": 0.1875
+    },
+    {
+      "Band": "(0.35, 0.5]",
+      "Count": 17,
+      "Predicted": 0.42299225108809413,
+      "Actual": 0.5294117647058824
+    },
+    {
+      "Band": "(0.5, 1.0]",
+      "Count": 2,
+      "Predicted": 0.5215288353239771,
+      "Actual": 0.5
+    }
+  ],
+  "limitations": "Current-roster retrospective, appearance-conditional, no historical odds; not a forward test or profitability validation."
+}
