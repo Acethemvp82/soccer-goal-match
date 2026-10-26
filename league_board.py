@@ -12,9 +12,10 @@ from extra_leagues import BASE, LEAGUES, BASIC_VERSION, fetch_schedule, fetch_co
 from model import parse_time
 from rankings import prepare_rankings, ranking_controls, order_rankings
 from analysis_tools import evaluation_summary, grade_snapshot
+from match_observations import parse_match_observations, screen_player
 
 ET=ZoneInfo('America/New_York')
-CORE={'ger.1':'German Bundesliga','ger.2':'German 2. Bundesliga','fra.1':'French Ligue 1','ita.1':'Italian Serie A','den.1':'Danish Superliga','aut.1':'Austrian Bundesliga'}
+CORE={'ger.1':'German Bundesliga','ger.2':'German 2. Bundesliga','fra.1':'French Ligue 1','ita.1':'Italian Serie A','den.1':'Danish Superliga','aut.1':'Austrian Bundesliga','mex.1':'Mexican Liga MX'}
 
 @st.cache_data(ttl=300,show_spinner=False)
 def load_schedule(code,date):return fetch_schedule(code,date)
@@ -57,12 +58,13 @@ def slate_data(code,date):
 def board_frame(rows,combined=False):
     records=[]
     for r in rows:
-        record={'League':LEAGUES.get(r.get('league'), 'English Premier League'),'League rank':r.get('overallRank'),'Rank change':r.get('rankChange'),'Team rank':r.get('teamRank'),'Position rank':r.get('positionRank'),'Player':r['short'],'Position':r['position'],'Team':r['team'],'Opponent':r['opponent']+(' (H)' if r['home'] else ' (A)'),'Goal Threat':r['goalThreat'],'Goal Match':r['goalMatch'],'Est. minutes':r['minutes'],'Final Anytime':r['probability']*100 if r['probability'] is not None else None,'Scoring outlook':r['outlook'],'Lineup':r['lineup'],'Checks':r['readiness'],'Model':r.get('modelBasis','EPL xG-led')}
+        record={'League':LEAGUES.get(r.get('league'), 'English Premier League'),'League rank':r.get('overallRank'),'Rank change':r.get('rankChange'),'Team rank':r.get('teamRank'),'Position rank':r.get('positionRank'),'Player':r['short'],'Position':r['position'],'Team':r['team'],'Opponent':r['opponent']+(' (H)' if r['home'] else ' (A)'),'Goal Threat':r['goalThreat'],'Goal Match':r['goalMatch'],'Est. minutes':r['minutes'],'Final Anytime':r['probability']*100 if r['probability'] is not None else None,'Scoring outlook':r['outlook'],'Lineup':r['lineup'],'Checks':r['readiness'],'Starter/minutes screen':r.get('inputScreen'),'Model':r.get('modelBasis','EPL xG-led')}
         if not combined:record.pop('League')
         records.append(record)
     return pd.DataFrame(records)
 
 def render_rows(rows,style_board,show_odds,key,combined=False):
+    rows=[dict(r,inputScreen=screen_player(r,datetime.now(timezone.utc))) for r in rows]
     rows=prepare_rankings(rows)
     ranking_order,ranking_limit=ranking_controls(key)
     teams=sorted({r['team'] for r in rows});a,b,c=st.columns([1,1,2])
@@ -70,8 +72,10 @@ def render_rows(rows,style_board,show_odds,key,combined=False):
     position=b.selectbox('Position',['All outfield','FWD','MID','DEF','Unknown'],key=key+'position')
     search=c.text_input('Player search',key=key+'search',placeholder='Search a player…')
     starter=st.checkbox('Confirmed starters only',key=key+'starters')
+    screened=st.checkbox('Screened starters only',key=key+'screened',help='Confirmed starter, available, at least 450 sample minutes and three history records, expected minutes at least 60, and complete input checks. This does not validate the forecast.')
     available=st.checkbox('No injury flag only',value=True,key=key+'availability')
     visible=[r for r in rows if (team=='All teams' or r['team']==team) and (position=='All outfield' or r['position']==position) and search.casefold() in r['name'].casefold() and (not starter or r['lineup']=='Confirmed starter') and (not available or r['available'])]
+    if screened:visible=[r for r in visible if r['inputScreen']=='Inputs screened — unvalidated']
     visible=order_rankings(visible,ranking_order,ranking_limit)
     a,b,c=st.columns(3);a.metric('Outfield players',len({(r.get('league'),r['id']) for r in visible}));b.metric('Calculated forecasts',sum(r['probability'] is not None for r in visible));c.metric('Confirmed starters',sum(r['lineup']=='Confirmed starter' for r in visible))
     st.caption('Goal Threat: green 80+, yellow 60–79, orange 40–59, red below 40. Goal Match: green 60+, yellow 55–59, gray 45–54, orange 40–44, red below 40. Final Anytime colors retain the existing scoring bands; they do not establish betting value.')
@@ -91,32 +95,63 @@ def render_rows(rows,style_board,show_odds,key,combined=False):
         st.write(f'**{r["name"]}** · {r["teamName"]} · {r["position"]}')
         st.write(f'Goals in loaded history: **{r["goals"]}** · Shots: **{r.get("shots", "Unavailable")}** · Minutes: **{int(r["seasonMinutes"])}** · xG: **Unavailable**' if r.get('league') != 'eng.1' else f'Season goals: **{r["goals"]}** · Season xG: **{r.get("xg", "Unavailable")}**')
         st.write(f'Lineup: **{r["lineup"]}** · **{r["readiness"]}**')
+        st.write(f'Starter/minutes screen: **{r["inputScreen"]}**')
+        if r.get('recentMinutes') is not None:
+            st.caption(f'Recent window: {r.get("recentGames", 0)} records · {r.get("recentStarts", 0)} starts · {r["recentMinutes"]:.0f} minutes · Shots: {r.get("recentShots", "Unavailable")} · Goals: {r.get("recentGoals", "Unavailable")}. Historical production, not live activity.')
+        profile=r.get('minutesProfile') or {}
+        if profile:st.caption(f'Observed starter minutes: {profile.get("starterMinutes")} · Observed substitute minutes: {profile.get("benchMinutes")}. These are role averages, not a guarantee of playing time.')
         if r.get('news'):st.write(r['news'])
         if r.get('probabilityLow') is not None:st.caption(f'Minutes sensitivity: {r["probabilityLow"]:.1%}–{r["probabilityHigh"]:.1%}. Not a confidence interval.')
 
 def k_to_name(lookup):return lambda k:lookup[k]['name']+' · '+lookup[k]['team']
 
+
+def render_match_observations(code,games,schedule_as_of=None):
+    with st.expander('Match observations — shots and substitutions'):
+        st.caption('Source-reported observations only. No next-scorer or remaining-time probabilities. A trailing team alone does not identify the next scorer. Provider data can lag; verify the match clock and player status.')
+        if schedule_as_of:st.caption('Schedule retrieved '+parse_time(schedule_as_of).astimezone(ET).strftime('%b %d · %I:%M:%S %p ET'))
+        if not st.checkbox('Load match observations',key='observe_'+code):return
+        lookup={str(g['id']):g for g in games}
+        if not lookup:st.info('No fixture identifiers available.');return
+        selected=st.selectbox('Match to inspect',list(lookup),format_func=lambda k:lookup[k]['home'].get('displayName','Home')+' vs '+lookup[k]['away'].get('displayName','Away'),key='observe_match_'+code)
+        game=lookup[selected]
+        try:
+            packet=load_observation(code,game['id'])
+            observed=parse_match_observations(game,packet['summary'])
+        except Exception:
+            st.warning('Verified match observations unavailable. No live player activity is being inferred.');return
+        st.write(f"**{game['home'].get('displayName','Home')} {observed['homeScore'] if observed['homeScore'] is not None else '—'} – {observed['awayScore'] if observed['awayScore'] is not None else '—'} {game['away'].get('displayName','Away')}** · {observed['clock']}")
+        st.caption('Summary retrieved '+parse_time(packet['retrievedAt']).astimezone(ET).strftime('%b %d · %I:%M:%S %p ET')+' · 2-minute cache. Retrieval time is not the provider’s last event time. No exit reported does not confirm a player is still on the field.')
+        if not observed['rows']:st.info('No player stats were returned. Missing stats are not counted as zero.');return
+        st.dataframe(pd.DataFrame(observed['rows']).style.format(precision=0,na_rep='—'),hide_index=True,use_container_width=True)
+
+@st.cache_data(ttl=120,max_entries=100,show_spinner=False)
+def load_observation(code,fixture):
+    return {'summary':fetch_url(BASE+code+'/summary?event='+str(fixture)),'retrievedAt':datetime.now(timezone.utc).isoformat()}
+
 def render_extra(code,style_board,show_odds):
     st.subheader(LEAGUES[code])
     st.info('Separate basic model: shots and goals, without xG. Player coverage varies by competition. Missing estimates stay blank; EPL validation does not transfer to this model.')
     if st.button('↻ Refresh league data',key='refresh_extra'):
-        load_schedule.clear();load_pregame_summary.clear();load_roster.clear();load_context.clear()
+        load_schedule.clear();load_pregame_summary.clear();load_roster.clear();load_context.clear();load_observation.clear()
     try:
         schedule=load_schedule(code,datetime.now(ET).date().isoformat())
         now=datetime.now(timezone.utc)
         # Keep today's live/completed fixtures visible; do not use them as new pregame predictions.
         today_et=now.astimezone(ET).date()
-        games=[g for g in schedule['games'] if parse_time(g['kickoff_time']).astimezone(ET).date()>=today_et]
+        games=[g for g in schedule['games'] if parse_time(g['kickoff_time']).astimezone(ET).date()>=today_et-timedelta(days=1)]
         dates=sorted({parse_time(g['kickoff_time']).astimezone(ET).date() for g in games})
         if not dates:
-            st.info('No fixtures were returned for today or the next eight days. This competition may be inactive or lack a current schedule feed.')
+            st.info('No fixtures were returned for yesterday, today or the next seven days. This competition may be inactive or lack a current schedule feed.')
             try:
                 context=load_context(code,datetime.now(ET).date().isoformat())
                 render_checks(code,context,schedule['games'])
             except Exception:
                 st.caption('Historical player data is also unavailable for this competition.')
             return
-        if st.session_state.get('extra_date') not in dates:st.session_state['extra_date']=dates[0]
+        if st.session_state.get('extra_date') not in dates:
+            live_dates=[parse_time(g['kickoff_time']).astimezone(ET).date() for g in games if g['started'] and not g['finished'] and parse_time(g['kickoff_time']).astimezone(ET).date()<=today_et]
+            st.session_state['extra_date']=max(live_dates) if live_dates else next((d for d in dates if d>=today_et),dates[-1])
         date=st.selectbox('Match date',dates,format_func=lambda d:d.strftime('%a, %b %d, %Y'),key='extra_date')
         with st.spinner('Loading competition histories, squads and published XIs…'):
             rows,schedule,context,failures,rosters=slate_data(code,date)
@@ -126,12 +161,13 @@ def render_extra(code,style_board,show_odds):
     selected=[g for g in games if parse_time(g['kickoff_time']).astimezone(ET).date()==date]
     cards=''.join('<div class="match"><b>'+html.escape(g['home'].get('displayName',''))+' vs '+html.escape(g['away'].get('displayName',''))+'</b><small>'+('FINAL' if g['finished'] else 'LIVE' if g['started'] else parse_time(g['kickoff_time']).astimezone(ET).strftime('%a %I:%M %p ET'))+'</small></div>' for g in selected)
     if any(g['started'] for g in selected):
-        st.info('Live/completed matches remain in the fixture list. The player prediction board is pregame-only; no retrospective probabilities are generated after kickoff. Live scorer tracking is not yet available.')
+        st.info('Live/completed matches remain in the fixture list. The player prediction board is pregame-only; no retrospective probabilities are generated after kickoff. Open Match observations below for source-reported shots and substitution status; these are not in-play forecasts.')
     st.markdown('<div class="schedule">'+cards+'</div>',unsafe_allow_html=True)
     if schedule['scheduleFailures'] or failures:st.warning('Some schedule, roster or lineup requests failed. Coverage is incomplete; unmatched starters remain unconfirmed.')
     if context:
         st.caption(f'History: {context["requestedMatches"]-len(context["failedMatches"])} / {context["requestedMatches"]} match packets loaded; {context.get("usableMatches", 0)} with usable player histories; {context["missingEntries"]} incomplete player-stat entries; {context["scheduleErrors"]} team schedules unavailable. History packets are selected from each team’s latest eight completed matches.')
-    if not rows:st.info('No outfield squad data was returned for this slate.');return
+    render_match_observations(code,selected,schedule['asOf'] if 'asOf' in schedule else None)
+    if not rows:st.info('No upcoming player forecasts for this date. Started/completed matches are shown above without generating new pregame estimates.');return
     render_rows(rows,style_board,show_odds,'extra_')
     if context:render_checks(code,context,schedule['games'])
     with st.expander('Basic model details and limits'):
@@ -194,10 +230,11 @@ def render_combined(style_board,show_odds,epl_loader):
                 if code=='eng.1':data=epl_loader(date);loaded=data
                 else:data=slate_data(code,date);loaded=data[0]
                 rows.extend(loaded)
-                coverage.append({'Competition':names[code],'Players':len(loaded),'Estimates':sum(r['probability'] is not None for r in loaded),'Status':'Loaded' if loaded else 'No upcoming rows returned'})
+                coverage.append({'Competition':names[code],'Players':len(loaded),'Estimates':sum(r['probability'] is not None for r in loaded),'Status':'Loaded' if loaded else 'No pregame player rows returned'})
             except Exception:coverage.append({'Competition':names[code],'Players':0,'Estimates':0,'Status':'Feed unavailable'})
     st.dataframe(pd.DataFrame(coverage),hide_index=True,use_container_width=True)
     if not rows:st.info('No player rows were available for the selected date and competitions.');return
     st.warning('Different league models are not calibrated against each other. League rank stays within each competition; this combined display is not a global betting-confidence ranking.')
     rows.sort(key=lambda r:(r.get('league','eng.1'),r.get('overallRank') or 99999,r['name']))
     render_rows(rows,style_board,show_odds,'combined_',combined=True)
+

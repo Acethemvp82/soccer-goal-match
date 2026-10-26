@@ -74,3 +74,12 @@ Basic-league exports include a competition identifier and model version. Upload 
 The open board recalculates every two minutes. League, team and position ranks use available players with a calculated Final Anytime estimate, before filters. Sort by Final Anytime, Goal Threat or Goal Match; top-10/top-25 views select the Final Anytime ranks within each league. Combined leagues retain independent ranks.
 
 Rank movement compares changed input snapshots in the current browser session. Widget reruns preserve the last movement; a new session or changed fixture set starts a new comparison. No historical movement database is implied. The board calculation time is separate from source timestamps/cache ages. Automatic reruns respect existing feed caches; the single-league refresh button forces current histories as well as lineups/squads. These are pregame rankings, with started fixtures removed; no in-play scoring model is supplied.
+
+
+## Coverage and input checks (October 26)
+
+ESPN schedule queries include the previous provider day as well as the next eight days. The single-competition date picker retains yesterday so late fixtures crossing midnight remain inspectable. Liga MX is included in the default combined selection (eight competitions total). Live/final fixture visibility never creates a new pregame forecast.
+
+The optional Screened starters only filter requires a confirmed starter, no availability flag, at least 450 sample minutes and three history records, at least 60 estimated minutes, and complete model input checks. The original probability weights and rank definition are unchanged. Passing this filter is not a validated edge. The basic model now flags low expected minutes consistently.
+
+In the single-competition view, Match observations is an opt-in panel using verified fixture/team identifiers. It displays source-reported goals, shots, shots on target, and substitutions/red cards, with unknown fields left blank and a retrieval timestamp. Its cache is two minutes. No exit reported is not assurance that a player remains on the field. This panel does not estimate next scorers, remaining minutes, or live betting value; the pregame board remains separate.

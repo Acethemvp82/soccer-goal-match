@@ -77,7 +77,7 @@ def normalize_game(event):
 def fetch_schedule(code, date):
     if code not in LEAGUES:raise ValueError('Unsupported league')
     now=datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
-    days=[(now+timedelta(days=i)).strftime('%Y%m%d') for i in range(8)]
+    days=[(now+timedelta(days=i)).strftime('%Y%m%d') for i in range(-1,8)]
     replies=[];failures=0
     # Soccer scoreboards accept single dates, not date-range syntax.
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -240,8 +240,9 @@ def make_board(code,games,context,rosters,lineups,now=None):
                 if not sufficient:checks='History/minutes insufficient'
                 elif not available:checks='Availability concern'
                 elif sample<450:checks='Limited sample'
-                if context['failedMatches'] or context['missingEntries']>0:checks='History incomplete — review'
-                rows.append(dict(id=pid,fixture=game['id'],league=code,name=p.get('displayName',str(pid)),short=p.get('displayName',str(pid)),team=team.get('abbreviation',team.get('displayName')),teamName=team.get('displayName'),opponent=opponent.get('abbreviation',opponent.get('displayName')),home=side=='home',position=position,kickoff=game['kickoff_time'],seasonMinutes=sample,goals=sum(x['goals_scored'] for x in h),shots=sum(x['shots'] for x in h),xg=None,xg90=None,goalThreat=threat,goalMatch=js_round(clamp(50+60*(factor-1),0,100)) if factor is not None else None,minutes=js_round(profile['minutes']) if sufficient else None,probability=probability,probabilityLow=mixture_probability(rate,profile,factor,-15) if sufficient else None,probabilityHigh=mixture_probability(rate,profile,factor,15) if sufficient else None,available=available,availability='Flagged' if not available else 'No injury flag',lineup=lineup,limited=sample<450,news=notes,readiness=checks,modelVersion=BASIC_VERSION,modelBasis='Shots/goals; no xG',asOf=now.isoformat(),sourceAsOf=context['asOf'],historyGames=len(h),recentStarts=profile['recentStarts'] if profile else None,recentGames=profile['recentGames'] if profile else None))
+                elif profile['minutes']<60:checks='Minutes concern'
+                if context['failedMatches'] or context['missingEntries']>0 or context.get('scheduleErrors',0):checks='History incomplete — review'
+                rows.append(dict(id=pid,fixture=game['id'],league=code,name=p.get('displayName',str(pid)),short=p.get('displayName',str(pid)),team=team.get('abbreviation',team.get('displayName')),teamName=team.get('displayName'),opponent=opponent.get('abbreviation',opponent.get('displayName')),home=side=='home',position=position,kickoff=game['kickoff_time'],seasonMinutes=sample,goals=sum(x['goals_scored'] for x in h),shots=sum(x['shots'] for x in h),xg=None,xg90=None,goalThreat=threat,goalMatch=js_round(clamp(50+60*(factor-1),0,100)) if factor is not None else None,minutes=js_round(profile['minutes']) if sufficient else None,probability=probability,probabilityLow=mixture_probability(rate,profile,factor,-15) if sufficient else None,probabilityHigh=mixture_probability(rate,profile,factor,15) if sufficient else None,available=available,availability='Flagged' if not available else 'No injury flag',lineup=lineup,limited=sample<450,news=notes,readiness=checks,modelVersion=BASIC_VERSION,modelBasis='Shots/goals; no xG',asOf=now.isoformat(),sourceAsOf=context['asOf'],historyGames=len(h),recentStarts=profile['recentStarts'] if profile else None,recentGames=profile['recentGames'] if profile else None,recentMinutes=profile['recentMinutes'] if profile else None,recentShots=sum(x['shots'] for x in h[-5:]),recentGoals=sum(x['goals_scored'] for x in h[-5:]),minutesProfile=profile))
     return rank_slate(rows)
 
 def diagnostic(context):
@@ -265,3 +266,4 @@ def diagnostic(context):
             if profile is None or rate is None or factor is None:continue
             records.append(dict(fixture=target['fixture'],playerId=pid,kickoff=target['kickoff_time'],probability=mixture_probability(rate,profile,factor),baseline=baseline[player['position']],scored=int(target['goals_scored']>0)))
     return records
+
