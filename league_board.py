@@ -104,10 +104,12 @@ def render_extra(code,style_board,show_odds):
     try:
         schedule=load_schedule(code,datetime.now(ET).date().isoformat())
         now=datetime.now(timezone.utc)
-        games=[g for g in schedule['games'] if not g['started'] and parse_time(g['kickoff_time'])>now]
+        # Keep today's live/completed fixtures visible; do not use them as new pregame predictions.
+        today_et=now.astimezone(ET).date()
+        games=[g for g in schedule['games'] if parse_time(g['kickoff_time']).astimezone(ET).date()>=today_et]
         dates=sorted({parse_time(g['kickoff_time']).astimezone(ET).date() for g in games})
         if not dates:
-            st.info('No upcoming fixtures were returned for the next eight days. This competition may be inactive or lack a current schedule feed.')
+            st.info('No fixtures were returned for today or the next eight days. This competition may be inactive or lack a current schedule feed.')
             try:
                 context=load_context(code,datetime.now(ET).date().isoformat())
                 render_checks(code,context,schedule['games'])
@@ -122,7 +124,9 @@ def render_extra(code,style_board,show_odds):
         st.warning('Current player data could not be loaded for this competition. No scoring estimates are being substituted from another league.')
         return
     selected=[g for g in games if parse_time(g['kickoff_time']).astimezone(ET).date()==date]
-    cards=''.join('<div class="match"><b>'+html.escape(g['home'].get('displayName',''))+' vs '+html.escape(g['away'].get('displayName',''))+'</b><small>'+parse_time(g['kickoff_time']).astimezone(ET).strftime('%a %I:%M %p ET')+'</small></div>' for g in selected)
+    cards=''.join('<div class="match"><b>'+html.escape(g['home'].get('displayName',''))+' vs '+html.escape(g['away'].get('displayName',''))+'</b><small>'+('FINAL' if g['finished'] else 'LIVE' if g['started'] else parse_time(g['kickoff_time']).astimezone(ET).strftime('%a %I:%M %p ET'))+'</small></div>' for g in selected)
+    if any(g['started'] for g in selected):
+        st.info('Live/completed matches remain in the fixture list. The player prediction board is pregame-only; no retrospective probabilities are generated after kickoff. Live scorer tracking is not yet available.')
     st.markdown('<div class="schedule">'+cards+'</div>',unsafe_allow_html=True)
     if schedule['scheduleFailures'] or failures:st.warning('Some schedule, roster or lineup requests failed. Coverage is incomplete; unmatched starters remain unconfirmed.')
     if context:
