@@ -1,4 +1,5 @@
 """Independent shots/goals model for six ESPN-covered European leagues."""
+BUILD_ID = '2026-10-26-tightening-1'
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta

@@ -9,6 +9,15 @@ import pandas as pd
 import streamlit as st
 from data_source import fetch_board, fetch_history, load_histories, fetch_lineups
 from analysis_tools import enrich_rows, compare_odds, walk_forward, evaluation_summary, grade_snapshot, VERSION
+# Streamlit can rerun the entrypoint while retaining imported helper modules.
+# Reload changed helpers once per process so a source update uses one release.
+import importlib
+import extra_leagues as _extra_leagues
+if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-10-26-tightening-1':
+    importlib.reload(_extra_leagues)
+import league_board as _league_board
+if getattr(_league_board, 'BUILD_ID', None) != '2026-10-26-tightening-1':
+    importlib.reload(_league_board)
 from league_board import LEAGUES, render_extra, render_combined
 from model import parse_time, rank_slate
 from match_observations import screen_player

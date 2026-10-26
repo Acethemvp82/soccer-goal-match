@@ -1,4 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
+BUILD_ID = '2026-10-26-tightening-1'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
