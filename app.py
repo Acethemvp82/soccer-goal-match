@@ -13,11 +13,14 @@ from analysis_tools import enrich_rows, compare_odds, walk_forward, evaluation_s
 # Reload changed helpers once per process so a source update uses one release.
 import importlib
 import extra_leagues as _extra_leagues
-if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-10-26-tightening-1':
+if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-10-26-tightening-2':
     importlib.reload(_extra_leagues)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != '2026-10-26-tightening-1':
+if getattr(_league_board, 'BUILD_ID', None) != '2026-10-26-tightening-2':
     importlib.reload(_league_board)
+    _league_board.load_schedule.clear()
+    _league_board.load_context.clear()
+    _league_board.load_pregame_summary.clear()
 from league_board import LEAGUES, render_extra, render_combined
 from model import parse_time, rank_slate
 from match_observations import screen_player
