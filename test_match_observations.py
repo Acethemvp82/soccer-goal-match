@@ -1,7 +1,7 @@
 import unittest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
-from match_observations import parse_match_observations, screen_player
+from match_observations import parse_match_observations, screen_player, priced_record_issue
 from extra_leagues import fetch_schedule, make_board
 
 NOW=datetime(2026,10,26,5,tzinfo=timezone.utc)
@@ -50,4 +50,22 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(screen_player(dict(row,readiness='History incomplete — review'),NOW),'Review data checks')
         self.assertEqual(screen_player(dict(row,kickoff=GAME['kickoff_time']),NOW),'Closed — match started')
 
+class PricedRecordTests(unittest.TestCase):
+    def setUp(self):
+        self.row=dict(kickoff=(NOW+timedelta(hours=1)).isoformat(),asOf=(NOW-timedelta(minutes=1)).isoformat(),probability=.3,available=True,lineup='Confirmed starter',limited=False,historyGames=6,minutes=75,readiness='Inputs checked — basic unvalidated')
+        self.price_time=(NOW-timedelta(minutes=1)).isoformat()
+    def test_screen_and_timestamps_gate_new_record(self):
+        self.assertIsNone(priced_record_issue(self.row,NOW,self.price_time,True))
+        for field,value in [('lineup','Unconfirmed'),('lineup','Confirmed bench'),('minutes',45),('historyGames',1),('limited',True),('readiness','History incomplete — review')]:
+            self.assertIsNotNone(priced_record_issue(dict(self.row,**{field:value}),NOW,self.price_time,True))
+        self.assertIsNotNone(priced_record_issue(self.row,NOW,self.price_time,False))
+        self.assertIsNotNone(priced_record_issue(self.row,NOW,self.price_time,True,stale=True))
+    def test_expired_forecast_future_price_and_kickoff_boundary(self):
+        self.assertIsNotNone(priced_record_issue(dict(self.row,asOf=(NOW-timedelta(minutes=11)).isoformat()),NOW,self.price_time,True))
+        self.assertIsNotNone(priced_record_issue(self.row,NOW,(NOW+timedelta(minutes=1)).isoformat(),True))
+        self.assertIsNotNone(priced_record_issue(self.row,NOW,(NOW-timedelta(minutes=11)).isoformat(),True))
+        self.assertIsNotNone(priced_record_issue(dict(self.row,kickoff=NOW.isoformat()),NOW,self.price_time,True))
+        self.assertIsNotNone(priced_record_issue(dict(self.row,asOf='2026-10-26T00:00:00'),NOW,self.price_time,True))
+
 if __name__=='__main__':unittest.main()
+

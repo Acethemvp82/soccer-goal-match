@@ -83,3 +83,8 @@ ESPN schedule queries include the previous provider day as well as the next eigh
 The optional Screened starters only filter requires a confirmed starter, no availability flag, at least 450 sample minutes and three history records, at least 60 estimated minutes, and complete model input checks. The original probability weights and rank definition are unchanged. Passing this filter is not a validated edge. The basic model now flags low expected minutes consistently.
 
 In the single-competition view, Match observations is an opt-in panel using verified fixture/team identifiers. It displays source-reported goals, shots, shots on target, and substitutions/red cards, with unknown fields left blank and a retrieval timestamp. Its cache is two minutes. No exit reported is not assurance that a player remains on the field. This panel does not estimate next scorers, remaining minutes, or live betting value; the pregame board remains separate.
+
+
+## Priced record checks (October 27)
+
+The odds panel now uses the starter/minutes screen before saving a new priced research record. The forecast calculation and manually entered odds must each be no more than ten minutes old, with valid timezone-aware timestamps before kickoff. Started fixtures are excluded from pregame pricing. Unconfirmed/bench/limited-minute players and incomplete input checks stay watch-only. These checks do not change scoring weights or establish a profitable edge.

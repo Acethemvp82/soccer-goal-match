@@ -1,5 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
-BUILD_ID = '2026-10-26-tightening-2'
+BUILD_ID = '2026-10-27-price-checks'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -238,4 +238,5 @@ def render_combined(style_board,show_odds,epl_loader):
     st.warning('Different league models are not calibrated against each other. League rank stays within each competition; this combined display is not a global betting-confidence ranking.')
     rows.sort(key=lambda r:(r.get('league','eng.1'),r.get('overallRank') or 99999,r['name']))
     render_rows(rows,style_board,show_odds,'combined_',combined=True)
+
 

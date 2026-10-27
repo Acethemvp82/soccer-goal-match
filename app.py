@@ -12,18 +12,21 @@ from analysis_tools import enrich_rows, compare_odds, walk_forward, evaluation_s
 # Streamlit can rerun the entrypoint while retaining imported helper modules.
 # Reload changed helpers once per process so a source update uses one release.
 import importlib
+import match_observations as _match_observations
+if getattr(_match_observations, 'BUILD_ID', None) != '2026-10-27-price-checks':
+    importlib.reload(_match_observations)
 import extra_leagues as _extra_leagues
 if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-10-26-tightening-2':
     importlib.reload(_extra_leagues)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != '2026-10-26-tightening-2':
+if getattr(_league_board, 'BUILD_ID', None) != '2026-10-27-price-checks':
     importlib.reload(_league_board)
     _league_board.load_schedule.clear()
     _league_board.load_context.clear()
     _league_board.load_pregame_summary.clear()
 from league_board import LEAGUES, render_extra, render_combined
 from model import parse_time, rank_slate
-from match_observations import screen_player
+from match_observations import screen_player, priced_record_issue
 from rankings import prepare_rankings, ranking_controls, order_rankings
 
 ET = ZoneInfo('America/New_York')
@@ -122,9 +125,10 @@ def record_odds_input():
 
 def show_odds(rows, stale):
     with st.expander('Odds comparison — enter your current sportsbook price', expanded=True):
-        options = [r for r in rows if r['probability'] is not None]
+        pricing_time = datetime.now(timezone.utc)
+        options = [r for r in rows if r['probability'] is not None and parse_time(r['kickoff']) > pricing_time]
         if not options:
-            st.info('No upgraded estimates are available for odds comparison.')
+            st.info('No upcoming estimates are available for pregame odds comparison.')
             return
         lookup = {str(r.get('league', 'eng.1')) + ':' + str(r['id']) + ':' + str(r['fixture']): r for r in options}
         choice = st.selectbox('Player to price', list(lookup), format_func=lambda key: lookup[key]['short'] + ' · ' + lookup[key]['team'] + ' vs ' + lookup[key]['opponent'], key='price_player', on_change=reset_price)
@@ -155,14 +159,18 @@ def show_odds(rows, stale):
         price_stale = not entered_at or datetime.now(timezone.utc)-parse_time(entered_at) > timedelta(minutes=10)
         if entered_at:
             st.caption('Price entered ' + parse_time(entered_at).astimezone(ET).strftime('%I:%M %p ET') + '; check the current sportsbook price again before using it.')
-        if void_rule and not price_stale:
+        record_issue = priced_record_issue(player, datetime.now(timezone.utc), entered_at, void_rule, stale)
+        if record_issue is None:
             priced = dict(player, modelVersion=player.get('modelVersion', VERSION), americanOdds=float(odds_text), oddsRecordedAt=entered_at, nonappearanceRule='void')
             st.download_button('Save priced pregame record', pd.DataFrame([priced]).to_csv(index=False).encode('utf-8-sig'), file_name='soccer-priced-pregame-record.csv', mime='text/csv')
+        st.caption('Saving a priced record requires a screened starter and a forecast and manually entered price no more than ten minutes old. Saved records are for research; screening does not establish betting value.')
         if price_stale:
             st.warning('Re-enter the current price: its entry time is missing or more than ten minutes old.')
         elif not void_rule:
             st.warning('Wait: the market nonappearance rule has not been confirmed.')
-        elif stale or player.get('readiness') != 'Inputs checked — unvalidated':
+        elif record_issue is not None:
+            st.warning('Watch only: ' + record_issue)
+        elif player.get('readiness') != 'Inputs checked — unvalidated':
             st.warning('Watch only: ' + player.get('readiness', 'Inputs not verified'))
         elif low is not None and low > result['breakEven']:
             st.info('Price clears the model’s lower-minutes scenario. Predictive accuracy and profitability are still unvalidated.')
@@ -397,4 +405,5 @@ def dashboard():
     st.caption('Sources: https://fantasy.premierleague.com/ and ESPN match rosters · Soccer Goal Match v2 · Streamlit')
 
 dashboard()
+
 

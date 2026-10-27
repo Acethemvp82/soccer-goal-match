@@ -1,4 +1,5 @@
 """Source-reported match observations, never in-play scoring probabilities."""
+BUILD_ID = '2026-10-27-price-checks'
 import math
 from model import parse_time
 
@@ -60,3 +61,32 @@ def screen_player(row, now):
     if row.get('readiness') not in ('Inputs checked — unvalidated','Inputs checked — basic unvalidated'):
         return 'Review data checks'
     return 'Inputs screened — unvalidated'
+
+
+
+def priced_record_issue(row, now, entered_at, void_rule, stale=False):
+    """Require current pregame inputs before saving a new priced research record."""
+    try:
+        capture=parse_time(row['asOf'])
+        kickoff=parse_time(row['kickoff'])
+        if capture.tzinfo is None or kickoff.tzinfo is None:
+            return 'Forecast time unavailable — refresh data'
+        if now>=kickoff or capture>=kickoff:
+            return 'Pregame pricing closed — match started'
+        age=(now-capture).total_seconds()
+        if age<0 or age>600 or stale:
+            return 'Forecast is stale — refresh data'
+        price_time=parse_time(entered_at) if entered_at else None
+        if price_time is None or price_time.tzinfo is None:
+            return 'Re-enter the current price'
+        price_age=(now-price_time).total_seconds()
+        if price_age<0 or price_age>600 or price_time>=kickoff:
+            return 'Re-enter the current price'
+    except (KeyError,TypeError,ValueError):
+        return 'Forecast or price time unavailable — refresh data'
+    if not void_rule:
+        return 'Verify the market nonappearance rule'
+    screen=screen_player(row,now)
+    if screen!='Inputs screened — unvalidated':
+        return screen
+    return None
