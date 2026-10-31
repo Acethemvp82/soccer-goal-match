@@ -19,15 +19,16 @@ import extra_leagues as _extra_leagues
 if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-10-26-tightening-2':
     importlib.reload(_extra_leagues)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != '2026-10-27-price-checks':
+if getattr(_league_board, 'BUILD_ID', None) != '2026-10-31-hammer':
     importlib.reload(_league_board)
     _league_board.load_schedule.clear()
     _league_board.load_context.clear()
     _league_board.load_pregame_summary.clear()
-from league_board import LEAGUES, render_extra, render_combined
+from league_board import LEAGUES, render_extra, render_combined, render_hammer_summary
 from model import parse_time, rank_slate
 from match_observations import screen_player, priced_record_issue
 from rankings import prepare_rankings, ranking_controls, order_rankings
+from hammer import annotate_hammers, RULE_TEXT
 
 ET = ZoneInfo('America/New_York')
 ROOT = Path(__file__).resolve().parent
@@ -328,15 +329,19 @@ def dashboard():
     st.info('Research model · Scoring estimates are conditional on the player appearing. Colors do not establish betting value. Calibration and profitability remain unproven.')
     slate = [dict(r,inputScreen=screen_player(r,datetime.now(timezone.utc))) for r in slate]
     slate = prepare_rankings(slate)
+    slate = annotate_hammers(slate,datetime.now(timezone.utc))
+    render_hammer_summary(slate,'epl_')
     ranking_order, ranking_limit = ranking_controls('epl_')
     c1, c2, c3, c4 = st.columns([1, 1, 2, 1.5])
     team = c1.selectbox('Team', ['All teams'] + sorted({r['team'] for r in slate}), key='team_filter')
     position = c2.selectbox('Position', ['All outfield', 'FWD', 'MID', 'DEF'])
     search = c3.text_input('Player search', placeholder='Search a player…')
     available_only = c4.checkbox('Available players only', value=True)
+    hammer_only = st.checkbox('🔨 Qualifiers only',key='epl_hammer_only')
     confirmed_only = st.checkbox('Confirmed starters only', value=False, help='Shows only players matched to a published starting XI; it can be empty before team news.')
     screened_only = st.checkbox('Screened starters only', help='Confirmed starter, available, at least 450 sample minutes and three history records, expected minutes at least 60, and complete input checks. This does not validate the forecast.')
     visible = [r for r in slate if (not available_only or r['available']) and (team == 'All teams' or r['team'] == team) and (position == 'All outfield' or r['position'] == position) and search.casefold() in r['name'].casefold() and (not confirmed_only or r['lineup'] == 'Confirmed starter')]
+    if hammer_only:visible = [r for r in visible if r.get('hammer')=='🔨']
     if screened_only:visible = [r for r in visible if r['inputScreen']=='Inputs screened — unvalidated']
     visible = order_rankings(visible, ranking_order, ranking_limit)
     m1, m2, m3 = st.columns(3)
@@ -351,9 +356,10 @@ def dashboard():
         return
     records = []
     for r in visible:
-        records.append({'League rank': r['overallRank'], 'Rank change': r['rankChange'], 'Team rank': r['teamRank'], 'Position rank': r.get('positionRank'), 'Player': r['short'], 'Position': r['position'], 'Team': r['team'], 'Opponent': r['opponent'] + (' (H)' if r['home'] else ' (A)'), 'Goal Threat': r['goalThreat'], 'Goal Match': r['goalMatch'], 'Est. minutes': r['minutes'], 'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None, 'Scoring outlook': r['outlook'], 'Availability': r['availability'], 'Lineup': r['lineup'], 'Checks': r.get('readiness', 'Await checks'), 'Starter/minutes screen':r.get('inputScreen'), 'Recent starts': str(r.get('recentStarts', '—')) + '/' + str(r.get('recentGames', '—'))})
+        records.append({'League rank': r['overallRank'], 'Rank change': r['rankChange'], 'Team rank': r['teamRank'], 'Position rank': r.get('positionRank'), '🔨':r.get('hammer',''), 'Player': r['short'], 'Position': r['position'], 'Team': r['team'], 'Opponent': r['opponent'] + (' (H)' if r['home'] else ' (A)'), 'Goal Threat': r['goalThreat'], 'Goal Match': r['goalMatch'], 'Est. minutes': r['minutes'], 'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None, 'Scoring outlook': r['outlook'], 'Availability': r['availability'], 'Lineup': r['lineup'], 'Checks': r.get('readiness', 'Await checks'), 'Starter/minutes screen':r.get('inputScreen'), 'Recent starts': str(r.get('recentStarts', '—')) + '/' + str(r.get('recentGames', '—'))})
     frame = pd.DataFrame(records)
     event = st.dataframe(style_board(frame), hide_index=True, use_container_width=True, height=590, on_select='rerun', selection_mode='single-row', column_config={
+        '🔨':st.column_config.TextColumn(help=RULE_TEXT,width='small'),
         'League rank': st.column_config.NumberColumn(help='Rank across available players on this date, before search/team/position filters.', format='%d'),
         'Position rank': st.column_config.NumberColumn(help='Rank among players with the same position in this league and date, before filters.', format='%d'),
         'Team rank': st.column_config.NumberColumn(help='Rank within the player’s team for this fixture.', format='%d'),
@@ -374,6 +380,7 @@ def dashboard():
         player = visible[selected[0]]
         with st.container(border=True):
             st.subheader(player['name'])
+            st.caption('🔨: '+player['hammerReason'])
             st.caption(f'{player["teamName"]} vs {player["opponent"]} · {player["position"]}')
             columns = st.columns(4)
             for col, label, value in zip(columns, ['Season goals', 'Season xG', 'Season minutes', 'Raw xG / 90'], [str(player['goals']), f'{player["xg"]:.2f}', str(int(player['seasonMinutes'])), f'{player["xg90"]:.2f}' if player['xg90'] is not None else '—']):
@@ -405,5 +412,6 @@ def dashboard():
     st.caption('Sources: https://fantasy.premierleague.com/ and ESPN match rosters · Soccer Goal Match v2 · Streamlit')
 
 dashboard()
+
 
 

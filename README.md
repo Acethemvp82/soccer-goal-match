@@ -88,3 +88,10 @@ In the single-competition view, Match observations is an opt-in panel using veri
 ## Priced record checks (October 27)
 
 The odds panel now uses the starter/minutes screen before saving a new priced research record. The forecast calculation and manually entered odds must each be no more than ten minutes old, with valid timezone-aware timestamps before kickoff. Started fixtures are excluded from pregame pricing. Unconfirmed/bench/limited-minute players and incomplete input checks stay watch-only. These checks do not change scoring weights or establish a profitable edge.
+
+
+## Soccer hammer research screen
+
+`🔨` appears immediately beside Player for a player/fixture row only when all requirements pass: team rank 1–3, Goal Threat ≥80, Goal Match ≥55, Final Anytime ≥20%, a forecast calculated within ten minutes before kickoff, and the existing confirmed-starter/minutes/history input screen. No price or live match activity enters this marker. These are provisional soccer research thresholds, not hockey's numeric score scale or a proven edge. Missing inputs, unconfirmed lineups, bench players, stale/started fixtures and incomplete checks receive no marker.
+
+Single-league EPL, other competitions and combined boards share the same rule. A Qualifiers only filter is optional. An expandable requirements panel reports the total qualifier count and each requirement's independent pass count before filters; zero qualifiers is valid. Original scores, ranks and colors are unchanged. Board CSVs include hammer, hammerReason, hammerChecks, hammerRuleVersion (`soccer-hammer-1.0`) and hammerEvaluatedAt for pregame tracking. Markers are not added retrospectively to live match observations.
