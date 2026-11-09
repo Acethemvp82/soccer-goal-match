@@ -1,4 +1,5 @@
 """Separate Streamlit panel; original scores, order and hammer criteria are untouched."""
+BUILD_ID='2026-11-09-simulator-2'
 from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
@@ -41,8 +42,10 @@ def render_simulator(rows,key):
         age=(datetime.now(timezone.utc)-parse_time(saved['createdAt'])).total_seconds()
         if saved['signature']!=fingerprint or not 0<=age<=600:
             st.info('Inputs/settings changed or this run is more than ten minutes old. Run the simulation again.');return
+        result_lookup={row_identity(r):r for r in saved['rows']}
+        ordered_results=[result_lookup[row_identity(r)] for r in eligible]
         records=[]
-        for r in saved['rows']:
+        for r in ordered_results:
             records.append({'Board league rank':r['overallRank'],'Team rank':r['teamRank'],'🔨':r['hammer'],'Player':r['name'],'Team':r['team'],'Lineup':r['lineup'],'Board Anytime':100*r['modelProbability'],'Scenario Anytime':100*r['scenarioProbability'],'Simulated Anytime':100*r['simulatedProbability'],'0 goals':100*r['zeroGoals']/RUNS,'1 goal':100*r['oneGoal']/RUNS,'2+ goals':100*r['multipleGoals']/RUNS,'Avg goals':r['meanGoals'],'Sampling ± pp':r['samplingMarginPP']})
         config={c:st.column_config.NumberColumn(format='%.1f%%') for c in ['Board Anytime','Scenario Anytime','Simulated Anytime','0 goals','1 goal','2+ goals']}
         config['Avg goals']=st.column_config.NumberColumn(format='%.2f')
@@ -50,4 +53,4 @@ def render_simulator(rows,key):
         st.dataframe(pd.DataFrame(records),hide_index=True,use_container_width=True,column_config=config)
         st.caption('Keeps the board order. Scenario Anytime is the exact calculation for the selected minutes; Simulated Anytime should be close, with random sampling noise. Sampling ± pp is approximate simulation precision, not a confidence interval for real scoring ability. No simulation result changes a hammer or board rank.')
         st.caption('Run captured '+saved['createdAt']+' · Fixed seed for reproducible results. Each player uses 10,000 runs; outcomes are not combined into a match result.')
-        st.download_button('Download simulation results',pd.DataFrame(saved['rows']).to_csv(index=False).encode('utf-8-sig'),file_name='soccer-scorer-simulation.csv',mime='text/csv',key=key+'sim_export')
+        st.download_button('Download simulation results',pd.DataFrame(ordered_results).to_csv(index=False).encode('utf-8-sig'),file_name='soccer-scorer-simulation.csv',mime='text/csv',key=key+'sim_export')

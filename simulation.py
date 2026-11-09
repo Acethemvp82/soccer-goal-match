@@ -1,4 +1,5 @@
 """Independent, appearance-conditional scorer simulations using existing model inputs."""
+BUILD_ID='2026-11-09-simulator-2'
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -58,7 +59,7 @@ def row_identity(row):
 def signature(rows,minutes_delta):
     inputs=[]
     for row in rows:
-        inputs.append((row_identity(row),parameters(row),row.get('probability'),row.get('lineup'),row.get('readiness'),row.get('modelVersion'),row.get('overallRank'),row.get('teamRank'),row.get('hammer','')))
+        inputs.append((row_identity(row),parameters(row),row.get('probability'),row.get('lineup'),row.get('readiness'),row.get('modelVersion'),row.get('modelBasis'),row.get('name'),row.get('team'),row.get('opponent'),row.get('overallRank'),row.get('teamRank'),row.get('hammer','')))
     return sha256(json.dumps([SIM_VERSION,SEED,minutes_delta,sorted(inputs)],sort_keys=True).encode()).hexdigest()
 
 

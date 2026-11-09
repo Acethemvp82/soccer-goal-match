@@ -15,6 +15,12 @@ import importlib
 import match_observations as _match_observations
 if getattr(_match_observations, 'BUILD_ID', None) != '2026-10-27-price-checks':
     importlib.reload(_match_observations)
+import simulation as _simulation
+if getattr(_simulation, 'BUILD_ID', None) != '2026-11-09-simulator-2':
+    importlib.reload(_simulation)
+import simulation_ui as _simulation_ui
+if getattr(_simulation_ui, 'BUILD_ID', None) != '2026-11-09-simulator-2':
+    importlib.reload(_simulation_ui)
 import extra_leagues as _extra_leagues
 if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-11-09-simulator':
     importlib.reload(_extra_leagues)

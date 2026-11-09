@@ -41,6 +41,19 @@ class SimulationUI(unittest.TestCase):
         next(c for c in app.checkbox if c.label=='Simulate confirmed starters only').check().run()
         self.assertFalse(app.exception,app.exception)
         self.assertTrue(any('No current, complete' in i.value for i in app.info))
+    def test_sorting_preserves_seeded_results_but_follows_board_order(self):
+        app=AppTest.from_string(CODE,default_timeout=20)
+        source=rows();source.append(dict(source[0],id=2,name='Second Scorer',overallRank=2))
+        app.session_state['test_rows']=source;app.run()
+        app.checkbox[0].check().run()
+        next(b for b in app.button if b.label=='Run 10,000 scoring simulations').click().run()
+        first=next(d.value for d in app.dataframe if 'Simulated Anytime' in d.value.columns)
+        app.session_state['test_rows']=list(reversed(source));app.run()
+        self.assertFalse(app.exception,app.exception)
+        second=next(d.value for d in app.dataframe if 'Simulated Anytime' in d.value.columns)
+        self.assertEqual(second['Player'].tolist(),list(reversed(first['Player'].tolist())))
+        self.assertEqual(second['Simulated Anytime'].tolist(),list(reversed(first['Simulated Anytime'].tolist())))
+
     def test_changed_inputs_and_kickoff_remove_results(self):
         app=AppTest.from_string(CODE,default_timeout=20)
         source=rows();app.session_state['test_rows']=source;app.run()
