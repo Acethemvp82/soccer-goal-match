@@ -105,3 +105,9 @@ Results show board, exact scenario and simulated anytime rates, zero/one/two-or-
 This is not a joint match simulator, scoreline model, next-scorer forecast or parlay calculator. It does not model whether a player appears, goal timing, shared game-state correlations, full playing-time uncertainty or uncertainty in the estimated scoring rate. More runs reduce sampling noise, not forecast error; no betting edge is established. Unconfirmed roles are preliminary.
 
 Runs require available players, complete scoring inputs, a forecast calculated within ten minutes and a future kickoff. Original inputs must reproduce the displayed board estimate. Missing/invalid/incomplete/stale rows are excluded with reasons. Modified settings/inputs invalidate saved results; results expire after ten minutes. Fixed per-player/fixture/league seeds make reruns reproducible and immune to row reordering. Download the CSV to retain source/forecast/run timestamps, model and simulation versions, seed and assumptions; session results are not durable.
+
+## Cross-competition daily fixture discovery
+
+Choose Board view → Today's matches to see the all-competition ESPN scoreboard for the selected ET date, including scheduled, live and final matches. Neighboring provider dates are fetched to cover midnight boundaries, with event-ID deduplication. The fixture feed and selected match details cache for two minutes. Search by team or competition; load a selected match's verified summary to view player observations and open its identified league board. No league code is guessed from team names.
+
+This fixes discovery of Norway, Ecuador and Colombia fixtures that were absent from the default eight-competition combined selection. Combined pregame rankings still cover only selected competitions, and never create new forecasts after kickoff. ESPN's cross-competition feed is not asserted to include every sportsbook market. Partial failures and missing statistics are explicit.

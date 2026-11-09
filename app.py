@@ -36,6 +36,7 @@ from match_observations import screen_player, priced_record_issue
 from rankings import prepare_rankings, ranking_controls, order_rankings
 from hammer import annotate_hammers, RULE_TEXT
 from simulation_ui import render_simulator
+from daily_fixtures_ui import render_daily_fixtures
 
 ET = ZoneInfo('America/New_York')
 ROOT = Path(__file__).resolve().parent
@@ -275,7 +276,11 @@ def epl_daily_rows(date):
 
 @st.fragment(run_every='2m')
 def dashboard():
-    view=st.radio('Board view',['Single league','Combined daily board'],horizontal=True,key='board_view')
+    view=st.radio('Board view',['Single league','Combined daily board',"Today's matches"],horizontal=True,key='board_view')
+    if view=="Today's matches":
+        render_daily_fixtures()
+        return
+    st.caption("Missing a live game or a league? Choose Today’s matches above to browse across competitions.")
     if view=='Combined daily board':
         render_combined(style_board,show_odds,epl_daily_rows)
         return
@@ -298,6 +303,8 @@ def dashboard():
     now = datetime.now(timezone.utc)
     fixtures = [f for f in board['fixtures'] if parse_time(f['kickoff']) > now]
     dates = sorted({local_day(f['kickoff']) for f in fixtures})
+    if datetime.now(ET).date() not in dates:
+        st.info("No upcoming Premier League fixtures today in this feed. Choose Today's matches for other competitions and live games.")
     if not dates:
         st.info('No upcoming fixtures in the next 14 days were returned. Refresh for the latest schedule.')
         return
