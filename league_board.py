@@ -1,5 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
-BUILD_ID = '2026-10-31-hammer'
+BUILD_ID = '2026-11-09-simulator'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -15,6 +15,7 @@ from rankings import prepare_rankings, ranking_controls, order_rankings
 from analysis_tools import evaluation_summary, grade_snapshot
 from match_observations import parse_match_observations, screen_player
 from hammer import annotate_hammers, RULE_LABELS, RULE_TEXT, RULE_VERSION
+from simulation_ui import render_simulator
 
 ET=ZoneInfo('America/New_York')
 CORE={'ger.1':'German Bundesliga','ger.2':'German 2. Bundesliga','fra.1':'French Ligue 1','ita.1':'Italian Serie A','den.1':'Danish Superliga','aut.1':'Austrian Bundesliga','mex.1':'Mexican Liga MX'}
@@ -103,6 +104,7 @@ def render_rows(rows,style_board,show_odds,key,combined=False):
     export=[r for r in visible if r['probability'] is not None]
     st.download_button('Export pregame board ↓',pd.DataFrame(export).to_csv(index=False).encode('utf-8-sig'),file_name='soccer-multi-league-pregame.csv',mime='text/csv',disabled=not export,key=key+'export')
     st.caption('Exports include calculated forecasts only. Keep them before kickoff; current player and fixture identifiers include the competition in the export.')
+    render_simulator(visible,key)
     show_odds(visible,False)
     with st.expander('Player inputs'):
         lookup={str(r.get('league'))+':'+str(r['id'])+':'+str(r['fixture']):r for r in visible}

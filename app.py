@@ -16,10 +16,10 @@ import match_observations as _match_observations
 if getattr(_match_observations, 'BUILD_ID', None) != '2026-10-27-price-checks':
     importlib.reload(_match_observations)
 import extra_leagues as _extra_leagues
-if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-10-26-tightening-2':
+if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-11-09-simulator':
     importlib.reload(_extra_leagues)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != '2026-10-31-hammer':
+if getattr(_league_board, 'BUILD_ID', None) != '2026-11-09-simulator':
     importlib.reload(_league_board)
     _league_board.load_schedule.clear()
     _league_board.load_context.clear()
@@ -29,6 +29,7 @@ from model import parse_time, rank_slate
 from match_observations import screen_player, priced_record_issue
 from rankings import prepare_rankings, ranking_controls, order_rankings
 from hammer import annotate_hammers, RULE_TEXT
+from simulation_ui import render_simulator
 
 ET = ZoneInfo('America/New_York')
 ROOT = Path(__file__).resolve().parent
@@ -374,6 +375,7 @@ def dashboard():
     export = pd.DataFrame([dict(r, league='eng.1', matchDate=str(selected_date), sourceAsOf=board['asOf']) for r in visible if r['probability'] is not None]).drop(columns=['rate'], errors='ignore')
     st.download_button('Export pregame board ↓', export.to_csv(index=False).encode('utf-8-sig'), file_name=f'soccer-goal-match-{selected_date}.csv', mime='text/csv', disabled=export.empty)
     st.caption('Pregame exports include calculated forecasts only; rows without an estimate are excluded.')
+    render_simulator(visible,'epl_')
     show_odds(visible, bool(warning))
     selected = event.selection.rows
     if selected and selected[0] < len(visible):
