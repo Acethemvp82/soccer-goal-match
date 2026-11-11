@@ -25,7 +25,7 @@ import extra_leagues as _extra_leagues
 if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-11-09-simulator':
     importlib.reload(_extra_leagues)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != '2026-11-09-simulator':
+if getattr(_league_board, 'BUILD_ID', None) != 'goal-column-order-1':
     importlib.reload(_league_board)
     _league_board.load_schedule.clear()
     _league_board.load_context.clear()
@@ -370,7 +370,7 @@ def dashboard():
         return
     records = []
     for r in visible:
-        records.append({'League rank': r['overallRank'], 'Rank change': r['rankChange'], 'Team rank': r['teamRank'], 'Position rank': r.get('positionRank'), '🔨':r.get('hammer',''), 'Player': r['short'], 'Position': r['position'], 'Team': r['team'], 'Opponent': r['opponent'] + (' (H)' if r['home'] else ' (A)'), 'Goal Threat': r['goalThreat'], 'Goal Match': r['goalMatch'], 'Est. minutes': r['minutes'], 'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None, 'Scoring outlook': r['outlook'], 'Availability': r['availability'], 'Lineup': r['lineup'], 'Checks': r.get('readiness', 'Await checks'), 'Starter/minutes screen':r.get('inputScreen'), 'Recent starts': str(r.get('recentStarts', '—')) + '/' + str(r.get('recentGames', '—'))})
+        records.append({'League rank': r['overallRank'], 'Rank change': r['rankChange'], 'Team rank': r['teamRank'], 'Position rank': r.get('positionRank'), '🔨':r.get('hammer',''), 'Player': r['short'], 'Position': r['position'], 'Team': r['team'], 'Opponent': r['opponent'] + (' (H)' if r['home'] else ' (A)'), 'Goal Match': r['goalMatch'], 'Goal Threat': r['goalThreat'], 'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None, 'Est. minutes': r['minutes'], 'Scoring outlook': r['outlook'], 'Availability': r['availability'], 'Lineup': r['lineup'], 'Checks': r.get('readiness', 'Await checks'), 'Starter/minutes screen':r.get('inputScreen'), 'Recent starts': str(r.get('recentStarts', '—')) + '/' + str(r.get('recentGames', '—'))})
     frame = pd.DataFrame(records)
     event = st.dataframe(style_board(frame), hide_index=True, use_container_width=True, height=590, on_select='rerun', selection_mode='single-row', column_config={
         '🔨':st.column_config.TextColumn(help=RULE_TEXT,width='small'),

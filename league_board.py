@@ -1,5 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
-BUILD_ID = '2026-11-09-simulator'
+BUILD_ID = 'goal-column-order-1'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -61,7 +61,7 @@ def slate_data(code,date):
 def board_frame(rows,combined=False):
     records=[]
     for r in rows:
-        record={'League':LEAGUES.get(r.get('league'), 'English Premier League'),'League rank':r.get('overallRank'),'Rank change':r.get('rankChange'),'Team rank':r.get('teamRank'),'Position rank':r.get('positionRank'),'🔨':r.get('hammer',''),'Player':r['short'],'Position':r['position'],'Team':r['team'],'Opponent':r['opponent']+(' (H)' if r['home'] else ' (A)'),'Goal Threat':r['goalThreat'],'Goal Match':r['goalMatch'],'Est. minutes':r['minutes'],'Final Anytime':r['probability']*100 if r['probability'] is not None else None,'Scoring outlook':r['outlook'],'Lineup':r['lineup'],'Checks':r['readiness'],'Starter/minutes screen':r.get('inputScreen'),'Model':r.get('modelBasis','EPL xG-led')}
+        record={'League':LEAGUES.get(r.get('league'), 'English Premier League'),'League rank':r.get('overallRank'),'Rank change':r.get('rankChange'),'Team rank':r.get('teamRank'),'Position rank':r.get('positionRank'),'🔨':r.get('hammer',''),'Player':r['short'],'Position':r['position'],'Team':r['team'],'Opponent':r['opponent']+(' (H)' if r['home'] else ' (A)'),'Goal Match':r['goalMatch'],'Goal Threat':r['goalThreat'],'Final Anytime':r['probability']*100 if r['probability'] is not None else None,'Est. minutes':r['minutes'],'Scoring outlook':r['outlook'],'Lineup':r['lineup'],'Checks':r['readiness'],'Starter/minutes screen':r.get('inputScreen'),'Model':r.get('modelBasis','EPL xG-led')}
         if not combined:record.pop('League')
         records.append(record)
     return pd.DataFrame(records)
