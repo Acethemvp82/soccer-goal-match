@@ -25,7 +25,7 @@ import extra_leagues as _extra_leagues
 if getattr(_extra_leagues, 'BUILD_ID', None) != '2026-11-09-simulator':
     importlib.reload(_extra_leagues)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != 'goal-column-order-1':
+if getattr(_league_board, 'BUILD_ID', None) != 'active-fixtures-1':
     importlib.reload(_league_board)
     _league_board.load_schedule.clear()
     _league_board.load_context.clear()
@@ -36,6 +36,9 @@ from match_observations import screen_player, priced_record_issue
 from rankings import prepare_rankings, ranking_controls, order_rankings
 from hammer import annotate_hammers, RULE_TEXT
 from simulation_ui import render_simulator
+import daily_fixtures_ui as _daily_fixtures_ui
+if getattr(_daily_fixtures_ui, 'BUILD_ID', None) != 'active-fixtures-1':
+    importlib.reload(_daily_fixtures_ui)
 from daily_fixtures_ui import render_daily_fixtures
 
 ET = ZoneInfo('America/New_York')

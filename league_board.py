@@ -1,5 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
-BUILD_ID = 'goal-column-order-1'
+BUILD_ID = 'active-fixtures-1'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -156,12 +156,12 @@ def render_extra(code,style_board,show_odds):
     try:
         schedule=load_schedule(code,datetime.now(ET).date().isoformat())
         now=datetime.now(timezone.utc)
-        # Keep today's live/completed fixtures visible; do not use them as new pregame predictions.
+        # Keep live fixtures visible without carrying finished matches onto the board.
         today_et=now.astimezone(ET).date()
-        games=[g for g in schedule['games'] if parse_time(g['kickoff_time']).astimezone(ET).date()>=today_et-timedelta(days=1)]
+        games=[g for g in schedule['games'] if not g['finished'] and parse_time(g['kickoff_time']).astimezone(ET).date()>=today_et-timedelta(days=1)]
         dates=sorted({parse_time(g['kickoff_time']).astimezone(ET).date() for g in games})
         if not dates:
-            st.info('No fixtures were returned for yesterday, today or the next seven days. This competition may be inactive or lack a current schedule feed.')
+            st.info('No live or upcoming matches were returned. Finished matches are hidden.')
             try:
                 context=load_context(code,datetime.now(ET).date().isoformat())
                 render_checks(code,context,schedule['games'])
@@ -178,15 +178,15 @@ def render_extra(code,style_board,show_odds):
         st.warning('Current player data could not be loaded for this competition. No scoring estimates are being substituted from another league.')
         return
     selected=[g for g in games if parse_time(g['kickoff_time']).astimezone(ET).date()==date]
-    cards=''.join('<div class="match"><b>'+html.escape(g['home'].get('displayName',''))+' vs '+html.escape(g['away'].get('displayName',''))+'</b><small>'+('FINAL' if g['finished'] else 'LIVE' if g['started'] else parse_time(g['kickoff_time']).astimezone(ET).strftime('%a %I:%M %p ET'))+'</small></div>' for g in selected)
+    cards=''.join('<div class="match"><b>'+html.escape(g['home'].get('displayName',''))+' vs '+html.escape(g['away'].get('displayName',''))+'</b><small>'+('LIVE' if g['started'] else parse_time(g['kickoff_time']).astimezone(ET).strftime('%a %I:%M %p ET'))+'</small></div>' for g in selected)
     if any(g['started'] for g in selected):
-        st.info('Live/completed matches remain in the fixture list. The player prediction board is pregame-only; no retrospective probabilities are generated after kickoff. Open Match observations below for source-reported shots and substitution status; these are not in-play forecasts.')
+        st.info('Live matches remain in the fixture list until the feed reports them finished. The player prediction board is pregame-only; no retrospective probabilities are generated after kickoff. Open Match observations below for source-reported shots and substitution status; these are not in-play forecasts.')
     st.markdown('<div class="schedule">'+cards+'</div>',unsafe_allow_html=True)
     if schedule['scheduleFailures'] or failures:st.warning('Some schedule, roster or lineup requests failed. Coverage is incomplete; unmatched starters remain unconfirmed.')
     if context:
         st.caption(f'History: {context["requestedMatches"]-len(context["failedMatches"])} / {context["requestedMatches"]} match packets loaded; {context.get("usableMatches", 0)} with usable player histories; {context["missingEntries"]} incomplete player-stat entries; {context["scheduleErrors"]} team schedules unavailable. History packets are selected from each team’s latest eight completed matches.')
     render_match_observations(code,selected,schedule['asOf'] if 'asOf' in schedule else None)
-    if not rows:st.info('No upcoming player forecasts for this date. Started/completed matches are shown above without generating new pregame estimates.');return
+    if not rows:st.info('No upcoming player forecasts for this date. Live matches are shown above without generating new pregame estimates.');return
     render_rows(rows,style_board,show_odds,'extra_')
     if context:render_checks(code,context,schedule['games'])
     with st.expander('Basic model details and limits'):

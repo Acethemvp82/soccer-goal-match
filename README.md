@@ -108,6 +108,8 @@ Runs require available players, complete scoring inputs, a forecast calculated w
 
 ## Cross-competition daily fixture discovery
 
-Choose Board view → Today's matches to see the all-competition ESPN scoreboard for the selected ET date, including scheduled, live and final matches. Neighboring provider dates are fetched to cover midnight boundaries, with event-ID deduplication. The fixture feed and selected match details cache for two minutes. Search by team or competition; load a selected match's verified summary to view player observations and open its identified league board. No league code is guessed from team names.
+Choose Board view → Today's matches to see the all-competition ESPN scoreboard for the selected ET date, including scheduled and live matches. Neighboring provider dates are fetched to cover midnight boundaries, with event-ID deduplication. The fixture feed and selected match details cache for two minutes. Search by team or competition; load a selected match's verified summary to view player observations and open its identified league board. No league code is guessed from team names.
 
 This fixes discovery of Norway, Ecuador and Colombia fixtures that were absent from the default eight-competition combined selection. Combined pregame rankings still cover only selected competitions, and never create new forecasts after kickoff. ESPN's cross-competition feed is not asserted to include every sportsbook market. Partial failures and missing statistics are explicit.
+
+Finished matches are hidden in Today’s matches and league schedules once the feed marks them final. Historical results remain available for grading and model inputs.
