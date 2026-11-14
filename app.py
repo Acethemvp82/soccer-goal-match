@@ -45,7 +45,7 @@ ET = ZoneInfo('America/New_York')
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title='Soccer Goal Match | Ace', page_icon='⚽', layout='wide')
 st.markdown('''<style>
-.block-container{padding-top:2rem;max-width:1550px}h1{letter-spacing:-1px}h2{font-size:1.4rem!important}.eyebrow{letter-spacing:2px;color:#90efb1;font-size:11px;font-weight:700}.schedule{display:flex;gap:12px;overflow-x:auto;margin:10px 0 22px;padding-bottom:8px}.match{min-width:200px;padding:16px 20px;background:#111e1d;border:1px solid #294137;border-radius:11px}.match b{font-size:18px}.match small{display:block;color:#a3b8af;margin-top:5px}.legend{display:flex;gap:18px;flex-wrap:wrap;color:#b5c7bd;font-size:12px;margin:10px 0 15px}[data-testid="stMetric"]{background:#111e1d;padding:14px 18px;border-top:2px solid #497458;border-radius:8px}[data-testid="stDataFrame"]{border:1px solid #294137;border-radius:10px}
+.block-container{padding-top:2rem;max-width:1550px}h1{letter-spacing:-1px}h2{font-size:1.4rem!important}.eyebrow{letter-spacing:2px;color:#216347;font-size:11px;font-weight:700}.schedule{display:flex;gap:12px;overflow-x:auto;margin:10px 0 22px;padding-bottom:8px}.match{min-width:200px;padding:16px 20px;background:#edf5f0;border:1px solid #c4d6cb;border-radius:11px}.match b{font-size:18px;color:#20332a}.match small{display:block;color:#40594d;margin-top:5px}.legend{display:flex;gap:18px;flex-wrap:wrap;color:#40594d;font-size:12px;margin:10px 0 15px}[data-testid="stMetric"]{background:var(--secondary-background-color,#edf5f0);padding:14px 18px;border-top:2px solid #518469;border-radius:8px}[data-testid="stDataFrame"]{border:1px solid #c4d6cb;border-radius:10px}
 </style>''', unsafe_allow_html=True)
 st.markdown('<div class="eyebrow">ACE’S MATCHUP LAB / SOCCER</div>', unsafe_allow_html=True)
 st.title('Soccer Goal Match')
@@ -87,9 +87,9 @@ def get_data():
                 return board, f'Live refresh unavailable. Showing a saved official-data snapshot fetched {fetched}. Check current availability and lineups.'
         return None, 'Official FPL data could not be loaded. Refresh to retry. No current estimates are available.'
 
-COLORS = {'Strongest': ('#214d35', '#9cf2b6'), 'Strong': ('#45412a', '#f0dc94'), 'Moderate': ('#493628', '#efb68d')}
-NEUTRAL = ('#24352e', '#acbdb4')
-WEAK = ('#4b292c', '#f3a8ac')
+COLORS = {'Strongest': ('#d7efdf', '#195436'), 'Strong': ('#fff1c2', '#634800'), 'Moderate': ('#ffead8', '#783f19')}
+NEUTRAL = ('#eaf0ed', '#40594d')
+WEAK = ('#fbe1e1', '#872b36')
 
 def rating_colors(value, column):
     if pd.isna(value):
@@ -316,7 +316,7 @@ def dashboard():
     st.subheader('Match schedule')
     selected_date = st.selectbox('Match date', dates, format_func=lambda d: d.strftime('%a, %b %d, %Y'), key='match_date')
     selected_fixtures = [f for f in fixtures if local_day(f['kickoff']) == selected_date]
-    cards = ''.join(f'<div class="match"><b>{html.escape(f["home"])} <span style="color:#93aaa4">vs</span> {html.escape(f["away"])}</b><small>{parse_time(f["kickoff"]).astimezone(ET).strftime("%a, %b %d · %I:%M %p ET")}</small></div>' for f in selected_fixtures)
+    cards = ''.join(f'<div class="match"><b>{html.escape(f["home"])} <span style="color:#52695e">vs</span> {html.escape(f["away"])}</b><small>{parse_time(f["kickoff"]).astimezone(ET).strftime("%a, %b %d · %I:%M %p ET")}</small></div>' for f in selected_fixtures)
     st.markdown(f'<div class="schedule">{cards}</div>', unsafe_allow_html=True)
     fixture_ids = {f['id'] for f in selected_fixtures}
     slate = [r for r in board['rows'] if r['fixture'] in fixture_ids]
