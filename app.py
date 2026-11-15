@@ -44,7 +44,9 @@ ET = ZoneInfo('America/New_York')
 ROOT = Path(__file__).resolve().parent
 st.set_page_config(page_title='Soccer Goal Match | Ace', page_icon='⚽', layout='wide')
 st.markdown('''<style>
-.block-container{padding-top:2rem;max-width:1400px}h1{letter-spacing:-1px}h2{font-size:1.4rem!important}[data-testid="stDataFrame"]{border:1px solid #465a50;border-radius:8px}
+.block-container{padding-top:2rem;max-width:1400px}h1{letter-spacing:-1px}h2{font-size:1.4rem!important}[data-testid="stDataFrame"]{border:1px solid #303946;border-radius:8px}
+[data-testid="stMetric"]{background:#172236;padding:16px;border-radius:12px}
+div[data-testid="stCaptionContainer"]{color:#a9b8cc}
 </style>''', unsafe_allow_html=True)
 st.title('Soccer Goal Match')
 
@@ -84,8 +86,8 @@ def get_data():
                 return board, f'Live refresh unavailable. Showing a saved official-data snapshot fetched {fetched}. Check current availability and lineups.'
         return None, 'Official FPL data could not be loaded. Refresh to retry. No current estimates are available.'
 
-COLORS = {'Strongest': ('#306348', '#e0ffea'), 'Strong': ('#664d20', '#fff0be'), 'Moderate': ('#613e2c', '#ffdec6')}
-NEUTRAL = ('#293831', '#dbe8e0')
+COLORS = {'Strongest': ('#174c3c', '#f3f6fb'), 'Strong': ('#665220', '#fff0be'), 'Moderate': ('#4a391f', '#ffdec6')}
+NEUTRAL = ('#172236', '#eef4fa')
 WEAK = ('#563641', '#ffdce5')
 
 def rating_colors(value, column):
@@ -109,8 +111,8 @@ def rating_colors(value, column):
         return COLORS['Moderate']
     return WEAK
 
-SOFT_TINTS = {'#306348': '#263e32', '#664d20': '#3a3527', '#613e2c': '#3b3029',
-              '#293831': '#242f2a', '#563641': '#362b31'}
+SOFT_TINTS = {'#174c3c': '#15342d', '#665220': '#383220', '#4a391f': '#30271f',
+              '#172236': '#131d2f', '#563641': '#322433'}
 
 
 def style_board(frame, outlooks):
