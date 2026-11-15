@@ -35,9 +35,12 @@ if getattr(_league_board, 'BUILD_ID', None) != 'compact-board-1':
 from league_board import LEAGUES, render_extra, render_combined, render_rows, match_selector
 from model import parse_time, rank_slate
 from match_observations import priced_record_issue
+import daily_fixtures as _daily_fixtures
 import daily_fixtures_ui as _daily_fixtures_ui
-if getattr(_daily_fixtures_ui, 'BUILD_ID', None) != 'compact-board-1':
+if getattr(_daily_fixtures_ui, 'BUILD_ID', None) != 'match-coverage-1':
+    importlib.reload(_daily_fixtures)
     importlib.reload(_daily_fixtures_ui)
+    _daily_fixtures_ui.load_daily.clear()
 from daily_fixtures_ui import render_daily_fixtures
 
 ET = ZoneInfo('America/New_York')

@@ -23,6 +23,7 @@ def normalize_daily_event(event):
             try:return int(value) if state in ('in','post') and value is not None else None
             except (TypeError,ValueError):return None
         game.update(competitionLabel=comp.get('altGameNote') or event.get('season',{}).get('slug') or 'Competition not supplied',
+                    competitionCode=event.get('season',{}).get('slug'),
                     matchLabel=game['home'].get('displayName','Home')+' vs '+game['away'].get('displayName','Away'),
                     clock=status.get('displayClock') or status.get('type',{}).get('detail',''),
                     state=state,team_h_score=score('home'),team_a_score=score('away'))

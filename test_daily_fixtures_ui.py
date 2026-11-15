@@ -1,3 +1,4 @@
+from copy import deepcopy
 import unittest
 from pathlib import Path
 from datetime import datetime,timezone,timedelta
@@ -5,6 +6,7 @@ from unittest.mock import patch
 from streamlit.testing.v1 import AppTest
 from daily_fixtures import select_daily_events,ET
 from test_daily_fixtures import event
+from daily_fixtures_ui import best_match_summary
 
 ROOT=Path(__file__).resolve().parent
 NOW=datetime.now(timezone.utc)
@@ -50,5 +52,34 @@ class DailyUI(unittest.TestCase):
             self.assertFalse(app.exception,app.exception)
             self.assertEqual([d.value['Match'].tolist() for d in app.dataframe], [['Upcoming test'], ['Live test']])
             self.assertEqual(app.dataframe[1].value['Score'].tolist(), ['1–0'])
+
+    def test_passed_kickoff_with_stale_summary_is_not_upcoming_or_live(self):
+        game = dict(GAMES[0], kickoff_time=(NOW-timedelta(minutes=9)).isoformat())
+        packet = {'games':[game], 'failures':0, 'asOf':NOW.isoformat()}
+        status = {'summary':DETAILS, 'asOf':NOW.isoformat()}
+        with patch('daily_fixtures_ui.load_daily', return_value=packet), patch('daily_fixtures_ui.load_daily_summary', return_value=status):
+            app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=20)
+            app.session_state['board_view']="Today's matches"
+            app.run()
+            self.assertEqual(app.dataframe[0].value['Status'].tolist(), ['Kickoff passed · awaiting feed'])
+            next(c for c in app.checkbox if c.label=='Load selected match details').check().run()
+            self.assertFalse(app.exception,app.exception)
+            self.assertTrue(any('has not confirmed live play' in item.value for item in app.info))
+            self.assertEqual(len(app.dataframe),1)
+
+    def test_competition_summary_supplies_verified_live_player_rows(self):
+        game = dict(GAMES[0], kickoff_time=(NOW-timedelta(minutes=9)).isoformat())
+        detail = deepcopy(DETAILS)
+        detail['header']['competitions'][0]['status'] = {'type':{'state':'in'},'displayClock':"9'"}
+        detail['rosters'] = [{'homeAway':'home', 'team':{'id':str(game['team_h'])}, 'roster':[
+            {'athlete':{'id':'88','displayName':'Live Player'},'stats':[{'name':'totalShots','value':1}]}
+        ]}]
+        broad = {'summary':DETAILS,'asOf':NOW.isoformat()}
+        specific = {'summary':detail,'asOf':NOW.isoformat()}
+        with patch('daily_fixtures_ui.load_daily_summary',side_effect=[broad,specific]) as fetch:
+            _, observed = best_match_summary(game, NOW)
+            self.assertEqual(fetch.call_args.args, (game['id'],'ecu.1'))
+            self.assertEqual(observed['state'],'in')
+            self.assertEqual(observed['rows'][0]['Shots'],1)
 
 if __name__=='__main__':unittest.main()
