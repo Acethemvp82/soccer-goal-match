@@ -30,6 +30,19 @@ class DailyUI(unittest.TestCase):
             self.assertFalse(app.exception,app.exception)
             self.assertEqual(app.session_state['board_view'],'Single league')
             self.assertEqual(app.session_state['league_selection'],'ecu.1')
+    def test_shortcut_opens_exact_match_without_details(self):
+        packet={'games':GAMES,'failures':0,'asOf':NOW.isoformat()}
+        schedule={'games':GAMES,'season':2026,'scheduleFailures':0,'asOf':NOW.isoformat()}
+        with patch('daily_fixtures_ui.load_daily',return_value=packet),patch('daily_fixtures_ui.load_daily_summary',return_value={'summary':DETAILS,'asOf':NOW.isoformat()}),patch('league_board.load_schedule',return_value=schedule),patch('league_board.slate_data',return_value=([],schedule,None,[],{})):
+            app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=20)
+            app.session_state['board_view']="Today's matches"
+            app.run()
+            next(b for b in app.button if b.label=='View scorer board').click().run()
+            self.assertFalse(app.exception,app.exception)
+            self.assertEqual(app.session_state['board_view'],'Single league')
+            self.assertEqual(app.session_state['league_selection'],'ecu.1')
+            self.assertEqual(app.session_state['extra_match'],GAMES[0]['id'])
+
     def test_search_does_not_invent_player_forecasts(self):
         packet={'games':GAMES,'failures':0,'asOf':NOW.isoformat()}
         with patch('daily_fixtures_ui.load_daily',return_value=packet):

@@ -1,5 +1,5 @@
 """Today's fixtures stay visible across competitions and after kickoff."""
-BUILD_ID = 'match-coverage-1'
+BUILD_ID = 'scorer-shortcut-1'
 from datetime import datetime,timedelta
 import re
 from zoneinfo import ZoneInfo
@@ -61,6 +61,38 @@ def open_league(code,day):
     st.session_state['match_date' if code=='eng.1' else 'extra_date']=day
 
 
+def open_scorer_board(game, day):
+    try:
+        packet, observation = best_match_summary(game, datetime.now(ET))
+        code = packet['summary'].get('header', {}).get('league', {}).get('slug')
+        if observation['state'] != 'pre' or parse_time(game['kickoff_time']) <= datetime.now(ET):
+            raise ValueError('This match has started or its pregame status is unavailable.')
+        if code not in {'eng.1', *LEAGUES}:
+            raise ValueError('This competition does not have a supported scorer board.')
+        fixture = game['id']
+        if code == 'eng.1':
+            from data_source import fetch_board
+            from lineups import match_event
+            board = fetch_board()
+            teams = {t['id']: t for t in board['_bootstrap']['teams']}
+            event = dict(packet['summary']['header'], date=game['kickoff_time'])
+            matches = [f for f in board['_fixtures'] if not f.get('started') and
+                       not f.get('finished') and f.get('kickoff_time') and
+                       match_event(f, teams, [event])]
+            if len(matches) != 1:
+                raise ValueError('This match could not be matched to the Premier League scorer feed.')
+            fixture = matches[0]['id']
+        open_league(code, day)
+        st.session_state['epl_match' if code == 'eng.1' else 'extra_match'] = fixture
+        for suffix in ('team','position','search','hammer_only','starters','screened','availability','rank_limit','rank_sort'):
+            st.session_state.pop(('epl_' if code == 'eng.1' else 'extra_') + suffix, None)
+        st.session_state.pop('scorer_shortcut_error', None)
+    except ValueError as exc:
+        st.session_state['scorer_shortcut_error'] = str(exc)
+    except Exception:
+        st.session_state['scorer_shortcut_error'] = 'Unable to verify the scorer feed. Try again or open match details.'
+
+
 def render_daily_fixtures():
     st.subheader("Today's matches across competitions")
     now=datetime.now(ET)
@@ -101,8 +133,14 @@ def render_daily_fixtures():
         time='Live' if g['state']=='in' else 'Status unconfirmed' if g in pending else parse_time(g['kickoff_time']).astimezone(ET).strftime('%I:%M %p ET')
         return f"{g['matchLabel']} · {time}"
     selected=st.selectbox('Match details / open league board',list(lookup),format_func=match_label,key='daily_match_detail')
-    if not st.checkbox('Load selected match details',key='daily_load_detail'):return
     game=lookup[selected]
+    pregame=game.get('state')=='pre' and parse_time(game['kickoff_time'])>now
+    st.button('View scorer board', key='daily_scorer_shortcut', disabled=not pregame,
+              on_click=open_scorer_board, args=(game,chosen),
+              help='Open this exact upcoming match. Player forecasts depend on competition coverage.')
+    if st.session_state.get('scorer_shortcut_error'):
+        st.info(st.session_state['scorer_shortcut_error'])
+    if not st.checkbox('Load selected match details',key='daily_load_detail'):return
     try:
         details,observation=best_match_summary(game,now)
     except Exception:st.warning('Verified match details unavailable. No player activity is being inferred.');return
