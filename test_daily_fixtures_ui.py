@@ -38,4 +38,17 @@ class DailyUI(unittest.TestCase):
             self.assertTrue(any('No matches match' in i.value for i in app.info))
             self.assertFalse(any(b.label=='Run 10,000 scoring simulations' for b in app.button))
 
+    def test_upcoming_and_live_have_separate_sections_and_finished_is_hidden(self):
+        upcoming = dict(GAMES[0], matchLabel='Upcoming test')
+        live = dict(upcoming, id=88, matchLabel='Live test', state='in', started=True,
+                    team_h_score=1, team_a_score=0, clock='15 mins')
+        finished = dict(live, id=99, matchLabel='Finished test', state='post', finished=True)
+        with patch('daily_fixtures_ui.load_daily', return_value={'games':[upcoming,live,finished],'failures':0,'asOf':NOW.isoformat()}):
+            app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=20)
+            app.session_state['board_view']="Today's matches"
+            app.run()
+            self.assertFalse(app.exception,app.exception)
+            self.assertEqual([d.value['Match'].tolist() for d in app.dataframe], [['Upcoming test'], ['Live test']])
+            self.assertEqual(app.dataframe[1].value['Score'].tolist(), ['1–0'])
+
 if __name__=='__main__':unittest.main()

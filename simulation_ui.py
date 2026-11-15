@@ -1,5 +1,6 @@
 """Separate Streamlit panel; original scores, order and hammer criteria are untouched."""
-BUILD_ID='2026-11-09-simulator-2'
+BUILD_ID='compact-board-1'
+from contextlib import nullcontext
 from datetime import datetime, timezone
 import pandas as pd
 import streamlit as st
@@ -7,8 +8,8 @@ from model import parse_time
 from simulation import RUNS, eligibility_issue, row_identity, signature, simulate_rows
 
 
-def render_simulator(rows,key):
-    with st.expander('10,000-run scorer simulator'):
+def render_simulator(rows,key,embedded=False):
+    with (nullcontext() if embedded else st.expander('10,000-run scorer simulator')):
         st.caption('Player scoring scenarios using the existing model, conditional on the player appearing. Starter/substitute role is sampled, then goals are drawn from its Poisson scoring rate. These are independent player simulations, not a full-match engine, scoreline forecast, or parlay calculator. Simulating more times does not validate the underlying model.')
         if not st.checkbox('Enable scorer simulator',key=key+'sim_enable'):return
         lookup={str(r.get('league','eng.1'))+':'+str(r['fixture']):r for r in rows}
@@ -25,7 +26,8 @@ def render_simulator(rows,key):
             else:eligible.append(row)
         st.caption(f'{len(eligible)} eligible players · {len(excluded)} excluded from this view. Uses the board’s current player filters. Unconfirmed roles and bench estimates are conditional on an appearance; no probability of appearing is supplied.')
         if excluded:
-            with st.expander('Excluded simulation rows'):st.dataframe(pd.DataFrame(excluded),hide_index=True,use_container_width=True)
+            if st.checkbox('Show excluded simulation rows', key=key+'sim_exclusions'):
+                st.dataframe(pd.DataFrame(excluded),hide_index=True,use_container_width=True)
         if not eligible:st.info('No current, complete pregame estimates match these settings. Refresh data or adjust the filters.');return
         fingerprint=signature(eligible,delta)
         result_key=key+'sim_result'

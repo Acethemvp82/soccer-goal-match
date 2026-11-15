@@ -1,5 +1,5 @@
 """Today's fixtures stay visible across competitions and after kickoff."""
-BUILD_ID = 'active-fixtures-1'
+BUILD_ID = 'compact-board-1'
 from datetime import datetime,timedelta
 from zoneinfo import ZoneInfo
 import pandas as pd
@@ -29,7 +29,6 @@ def open_league(code,day):
 
 def render_daily_fixtures():
     st.subheader("Today's matches across competitions")
-    st.caption('Cross-competition ESPN fixture feed. This shows live and upcoming matches and may differ from your sportsbook’s available markets. Fixture coverage does not guarantee player statistics or a scoring estimate.')
     today=datetime.now(ET).date()
     chosen=st.date_input('Fixture date',value=today,min_value=today-timedelta(days=1),max_value=today+timedelta(days=7),key='daily_fixture_date')
     if st.button('↻ Refresh today’s fixtures',key='daily_refresh'):
@@ -38,20 +37,33 @@ def render_daily_fixtures():
     except Exception:st.warning('Cross-competition fixture feed unavailable. Use Single league to check a competition directly.');return
     if packet['failures']:st.warning('Some fixture requests failed; the list may be incomplete. Refresh or check the competition directly.')
     games=[g for g in packet['games'] if not g.get('finished') and g.get('state')!='post']
-    st.caption('Fixture feed retrieved '+parse_time(packet['asOf']).astimezone(ET).strftime('%b %d · %I:%M:%S %p ET')+' · refresh cache: 2 minutes.')
     if not games:st.info('No live or upcoming matches returned for this date. Finished matches are hidden.');return
     search=st.text_input('Find today’s team or competition',key='daily_fixture_search')
     visible=[g for g in games if search.casefold() in (g['matchLabel']+' '+g['competitionLabel']).casefold()]
-    records=[]
-    for g in visible:
-        status={'pre':'Scheduled','in':'LIVE'}.get(g['state'],'Status unavailable')
-        score=f"{g['team_h_score']}–{g['team_a_score']}" if g['team_h_score'] is not None and g['team_a_score'] is not None else '—'
-        records.append({'Kickoff ET':parse_time(g['kickoff_time']).astimezone(ET).strftime('%I:%M %p'),'Match':g['matchLabel'],'Competition':g['competitionLabel'],'Status':status,'Score':score,'Source clock':g['clock'] if g['state'] in ('in','post') else '—'})
-    st.dataframe(pd.DataFrame(records),hide_index=True,use_container_width=True)
-    st.caption('Finished matches are hidden. Live matches remain listed. Pregame probabilities, hammers and simulator runs are not generated retrospectively for matches that have started.')
     if not visible:st.info('No matches match this search.');return
-    lookup={str(g['id']):g for g in visible}
-    selected=st.selectbox('Match details / open league board',list(lookup),format_func=lambda k:lookup[k]['matchLabel'],key='daily_match_detail')
+    upcoming=[g for g in visible if g['state']!='in']
+    live=[g for g in visible if g['state']=='in']
+    for title, group in [('Upcoming matches', upcoming), ('Live matches', live)]:
+        if not group:continue
+        st.subheader(title)
+        records=[]
+        for g in group:
+            record={'Match':g['matchLabel'], 'Competition':g['competitionLabel']}
+            if title=='Live matches':
+                record['Score']=f"{g['team_h_score']}–{g['team_a_score']}" if g['team_h_score'] is not None and g['team_a_score'] is not None else '—'
+                record['Clock']=g['clock']
+            else:
+                record['Kickoff ET']=parse_time(g['kickoff_time']).astimezone(ET).strftime('%I:%M %p')
+                if g['state']!='pre':record['Status']='Status unavailable'
+            records.append(record)
+        st.dataframe(pd.DataFrame(records),hide_index=True,use_container_width=True,height=min(325,36+35*len(records)))
+    if live:st.caption('Live games show match activity only. Scoring forecasts are pregame.')
+    lookup={str(g['id']):g for g in [*upcoming,*live]}
+    def match_label(key):
+        g=lookup[key]
+        time='Live' if g['state']=='in' else parse_time(g['kickoff_time']).astimezone(ET).strftime('%I:%M %p ET')
+        return f"{g['matchLabel']} · {time}"
+    selected=st.selectbox('Match details / open league board',list(lookup),format_func=match_label,key='daily_match_detail')
     if not st.checkbox('Load selected match details',key='daily_load_detail'):return
     game=lookup[selected]
     try:

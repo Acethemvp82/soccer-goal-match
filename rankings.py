@@ -1,7 +1,6 @@
 """Pregame rank tracking; snapshots live only in the current browser session."""
+BUILD_ID = 'compact-board-1'
 from collections import defaultdict
-from datetime import datetime
-from zoneinfo import ZoneInfo
 import streamlit as st
 
 
@@ -38,9 +37,6 @@ def prepare_rankings(rows):
 
 
 def ranking_controls(key):
-    st.subheader('Live pregame player rankings')
-    checked = datetime.now(ZoneInfo('America/New_York')).strftime('%b %d · %I:%M:%S %p ET')
-    st.caption(f'Board calculated {checked} · Refreshes every 2 minutes while open. Source caches can be older; see data timestamps below. Rank change compares changed boards in this browser session; New marks the first observation. Rankings use Final Anytime within each league, before filters.')
     a, b = st.columns(2)
     order = a.selectbox('Sort players by', ['Final Anytime', 'Goal Threat', 'Goal Match'], key=key+'rank_sort')
     limit = b.selectbox('Ranking view', ['All players', 'Top 10 per league', 'Top 25 per league'], key=key+'rank_limit')
@@ -52,3 +48,4 @@ def order_rankings(rows, order, limit):
     n = {'All players': None, 'Top 10 per league': 10, 'Top 25 per league': 25}[limit]
     selected = [r for r in rows if n is None or (r.get('overallRank') is not None and r['overallRank'] <= n)]
     return sorted(selected, key=lambda r: (r.get('league', 'eng.1'), r.get(field) is None, -(r.get(field) or 0), r['name'], str(r['fixture'])))
+

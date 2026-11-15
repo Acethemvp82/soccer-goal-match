@@ -23,9 +23,10 @@ class HammerUI(unittest.TestCase):
         with patch('data_source.fetch_board',return_value=BOARD),patch('data_source.load_histories',return_value=({},[])),patch('analysis_tools.enrich_rows',side_effect=lambda rows,*a,**k:rank_slate(rows)):
             app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30).run()
             self.assertFalse(app.exception,app.exception)
-            frame=table(app);self.assertEqual(frame['🔨'].tolist(),['🔨',''])
-            self.assertEqual(list(frame.columns)[list(frame.columns).index('Player')-1],'🔨')
-            self.assertEqual(frame['League rank'].tolist(),[1,2])
+            frame=table(app)
+            self.assertEqual(frame['Player'].tolist(), ['🔨 Qualified Scorer', 'Below Threshold'])
+            self.assertEqual(list(frame.columns), ['Player', 'Team', 'Goal Match', 'Goal Threat', 'Final Anytime', 'Lineup'])
+            self.assertTrue(any('League rank **1**' in m.value for m in app.markdown))
             next(c for c in app.checkbox if c.label=='🔨 Qualifiers only').check().run()
             self.assertFalse(app.exception,app.exception)
             self.assertEqual(len(table(app)),1)
@@ -39,17 +40,45 @@ class HammerUI(unittest.TestCase):
             app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30)
             app.session_state['league_selection']='fra.1';app.run()
             self.assertFalse(app.exception,app.exception)
-            self.assertEqual(table(app)['🔨'].tolist(),['🔨',''])
+            self.assertEqual(table(app)['Player'].tolist(),['🔨 Qualified Scorer','Below Threshold'])
             next(c for c in app.checkbox if c.label=='🔨 Qualifiers only').check().run()
             self.assertEqual(len(table(app)),1)
             app.radio[0].set_value('Combined daily board').run()
             next(m for m in app.multiselect if m.label=='Competitions to combine').set_value(['fra.1','ger.1']).run()
             next(b for b in app.button if b.label=='Load selected competitions').click().run()
             self.assertFalse(app.exception,app.exception)
-            self.assertEqual(table(app)['🔨'].tolist(),['🔨','','🔨',''])
+            self.assertEqual(table(app)['Player'].tolist(),['🔨 Qualified Scorer','🔨 Qualified Scorer','Below Threshold','Below Threshold'])
             next(c for c in app.checkbox if c.label=='🔨 Qualifiers only').check().run()
             self.assertFalse(app.exception,app.exception)
             self.assertEqual(len(table(app)),2)
-            self.assertEqual(set(table(app)['League rank']),{1})
+            self.assertEqual(set(table(app)['Final Anytime']),{30})
+            self.assertTrue(any('League rank **1**' in m.value for m in app.markdown))
+
+    def test_match_filter_keeps_league_rank_and_player_tools(self):
+        second = dict(GAME, id=11, home={'displayName':'Second Home'})
+        limited = dict(BASE, id=3, fixture=11, name='Limited Scorer', short='Limited Scorer',
+                       team='SEC', limited=True, probability=.22, lineup='Unconfirmed', league='fra.1')
+        fixtures = dict(SCHEDULE, games=[GAME, second])
+
+        def mock_data(code, date):
+            return rank_slate([dict(r, league=code) for r in ROWS] + [limited]), fixtures, CONTEXT, [], {}
+
+        with patch('league_board.load_schedule', return_value=fixtures), patch('league_board.slate_data', side_effect=mock_data):
+            app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30)
+            app.session_state['league_selection']='fra.1'
+            app.run()
+            match=next(w for w in app.selectbox if w.label=='Match')
+            self.assertTrue(any('Second Home vs Away' in option and ' ET' in option for option in match.options))
+            match.set_value(11).run()
+            self.assertFalse(app.exception, app.exception)
+            self.assertEqual(table(app)['Player'].tolist(), ['Limited Scorer · Limited data'])
+            self.assertEqual(table(app)['Lineup'].tolist(), ['Unconfirmed'])
+            self.assertTrue(any('League rank **2**' in m.value for m in app.markdown))
+            next(r for r in app.radio if r.label=='Details to show').set_value('Odds comparison').run()
+            self.assertFalse(app.exception, app.exception)
+            self.assertEqual(next(w for w in app.selectbox if w.label=='Player to price').options, ['Limited Scorer · SEC vs AWY'])
+            next(r for r in app.radio if r.label=='Details to show').set_value('Simulator').run()
+            self.assertFalse(app.exception, app.exception)
+            self.assertTrue(any(w.label=='Enable scorer simulator' for w in app.checkbox))
 
 if __name__=='__main__':unittest.main()
