@@ -1,5 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
-BUILD_ID = 'goal-threat-first-1'
+BUILD_ID = 'top-five-per-team-1'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -117,6 +117,8 @@ def render_rows(rows, style_board, show_odds, key, combined=False, fixture=None,
 
     st.subheader('Anytime scorers')
     with st.expander('Player filters'):
+        show_all = st.checkbox('Show all players', key=key+'show_all',
+                               help='Turn off the Top 5 per team shortlist. Other player filters still apply.')
         ranking_order, ranking_limit = ranking_controls(key)
         teams = sorted({r['team'] for r in rows})
         a, b, c = st.columns([1, 1, 2])
@@ -138,18 +140,27 @@ def render_rows(rows, style_board, show_odds, key, combined=False, fixture=None,
                and (not available or r['available'])
                and (not hammer_only or r.get('hammer') == '🔨')
                and (not screened or r['inputScreen'] == 'Inputs screened — unvalidated')]
+    if not show_all:
+        counts = {}
+        shortlist = []
+        for row in order_rankings(visible, 'Final Anytime', ranking_limit):
+            group = (row.get('league', 'eng.1'), row['fixture'], row['team'])
+            if row['probability'] is not None and counts.get(group, 0) < 5:
+                shortlist.append(row)
+                counts[group] = counts.get(group, 0) + 1
+        visible = shortlist
     visible = order_rankings(visible, ranking_order, ranking_limit)
     if combined:
         field = {'Final Anytime': 'probability', 'Goal Threat': 'goalThreat', 'Goal Match': 'goalMatch'}[ranking_order]
         visible.sort(key=lambda r: (r.get(field) is None, -(r.get(field) or 0), r['name']))
     if not visible:
-        st.info('No players match this view. Try selecting another match or clearing the player filters.')
+        st.info('No players match this view. Try another match, clearing filters, or turning on Show all players.')
         return
 
     forecasts = sum(r['probability'] is not None for r in visible)
     confirmed = sum(r['lineup'] == 'Confirmed starter' for r in visible)
     hammers = sum(r.get('hammer') == '🔨' for r in visible)
-    st.caption(f'{forecasts} forecasts · {confirmed} confirmed starters · {hammers} 🔨')
+    st.caption(f'{"All players" if show_all else "Top 5 per team"} · {forecasts} forecasts · {confirmed} confirmed starters · {hammers} 🔨')
     frame = board_frame(visible, combined=combined and fixture is None)
     st.dataframe(style_board(frame, [r['outlook'] for r in visible]), hide_index=True,
                  use_container_width=True, height=min(520, 36 + 35 * len(frame)), column_config={
