@@ -285,7 +285,7 @@ def epl_daily_rows(date):
 
 @st.fragment(run_every='2m')
 def dashboard():
-    view=st.radio('Board view',['Single league','Combined daily board',"Today's matches"],horizontal=True,key='board_view')
+    view=st.radio('Board view',["Today's matches",'Single league','Combined daily board'],horizontal=True,key='board_view')
     if view=="Today's matches":
         render_daily_fixtures()
         return
