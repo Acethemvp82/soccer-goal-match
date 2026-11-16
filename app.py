@@ -27,7 +27,7 @@ import rankings as _rankings
 if getattr(_rankings, 'BUILD_ID', None) != 'compact-board-1':
     importlib.reload(_rankings)
 import league_board as _league_board
-if getattr(_league_board, 'BUILD_ID', None) != 'compact-board-1':
+if getattr(_league_board, 'BUILD_ID', None) != 'goal-threat-first-1':
     importlib.reload(_league_board)
     _league_board.load_schedule.clear()
     _league_board.load_context.clear()

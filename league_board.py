@@ -1,5 +1,5 @@
 """Multi-competition browsing and an explicitly separate basic scorer model."""
-BUILD_ID = 'compact-board-1'
+BUILD_ID = 'goal-threat-first-1'
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -84,8 +84,8 @@ def board_frame(rows, combined=False):
         if combined:
             record['Competition'] = LEAGUES.get(r.get('league'), 'English Premier League')
         record.update({
-            'Goal Match': r['goalMatch'],
             'Goal Threat': r['goalThreat'],
+            'Goal Match': r['goalMatch'],
             'Final Anytime': r['probability'] * 100 if r['probability'] is not None else None,
             'Lineup': r['lineup'],
         })
@@ -170,8 +170,8 @@ def render_rows(rows, style_board, show_odds, key, combined=False, fixture=None,
             show_odds(visible, stale)
         elif tool == 'Color guide & 🔨':
             st.markdown(
-                '**Goal Match** · Green 60+ · yellow 55–59 · gray 45–54 · orange 40–44 · red below 40.  \n'
                 '**Goal Threat** · Green 80+ · yellow 60–79 · orange 40–59 · red below 40.  \n'
+                '**Goal Match** · Green 60+ · yellow 55–59 · gray 45–54 · orange 40–44 · red below 40.  \n'
                 '**Final Anytime** · Green 35%+ · yellow 20–34.9% · orange 10–19.9% · gray otherwise or if data are limited.'
             )
             render_hammer_summary(rows)

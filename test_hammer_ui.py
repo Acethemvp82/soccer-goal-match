@@ -21,11 +21,13 @@ def extra_data(code,date):return rank_slate([dict(r,league=code,readiness='Input
 class HammerUI(unittest.TestCase):
     def test_epl_marker_filter_and_empty_filter_do_not_change_rank(self):
         with patch('data_source.fetch_board',return_value=BOARD),patch('data_source.load_histories',return_value=({},[])),patch('analysis_tools.enrich_rows',side_effect=lambda rows,*a,**k:rank_slate(rows)):
-            app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30).run()
+            app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30)
+            app.session_state['board_view']='Single league'
+            app.run()
             self.assertFalse(app.exception,app.exception)
             frame=table(app)
             self.assertEqual(frame['Player'].tolist(), ['🔨 Qualified Scorer', 'Below Threshold'])
-            self.assertEqual(list(frame.columns), ['Player', 'Team', 'Goal Match', 'Goal Threat', 'Final Anytime', 'Lineup'])
+            self.assertEqual(list(frame.columns), ['Player', 'Team', 'Goal Threat', 'Goal Match', 'Final Anytime', 'Lineup'])
             self.assertTrue(any('League rank **1**' in m.value for m in app.markdown))
             next(c for c in app.checkbox if c.label=='🔨 Qualifiers only').check().run()
             self.assertFalse(app.exception,app.exception)
@@ -38,6 +40,7 @@ class HammerUI(unittest.TestCase):
     def test_other_and_combined_leagues_use_same_marker(self):
         with patch('league_board.load_schedule',return_value=SCHEDULE),patch('league_board.slate_data',side_effect=extra_data):
             app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30)
+            app.session_state['board_view']='Single league'
             app.session_state['league_selection']='fra.1';app.run()
             self.assertFalse(app.exception,app.exception)
             self.assertEqual(table(app)['Player'].tolist(),['🔨 Qualified Scorer','Below Threshold'])
@@ -65,6 +68,7 @@ class HammerUI(unittest.TestCase):
 
         with patch('league_board.load_schedule', return_value=fixtures), patch('league_board.slate_data', side_effect=mock_data):
             app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=30)
+            app.session_state['board_view']='Single league'
             app.session_state['league_selection']='fra.1'
             app.run()
             match=next(w for w in app.selectbox if w.label=='Match')
