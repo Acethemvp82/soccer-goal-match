@@ -1,5 +1,5 @@
 """Today's fixtures stay visible across competitions and after kickoff."""
-BUILD_ID = 'scorer-shortcut-1'
+BUILD_ID = 'fanduel-ny-shortlist-1'
 from datetime import datetime,timedelta
 import re
 from zoneinfo import ZoneInfo
@@ -93,6 +93,15 @@ def open_scorer_board(game, day):
         st.session_state['scorer_shortcut_error'] = 'Unable to verify the scorer feed. Try again or open match details.'
 
 
+def toggle_fanduel_match(day, fixture):
+    shortlist = st.session_state.setdefault('fanduel_ny_shortlist', {})
+    marked = shortlist.setdefault(day, set())
+    if fixture in marked:
+        marked.remove(fixture)
+    else:
+        marked.add(fixture)
+
+
 def render_daily_fixtures():
     st.subheader("Today's matches across competitions")
     now=datetime.now(ET)
@@ -106,6 +115,15 @@ def render_daily_fixtures():
     games=[g for g in packet['games'] if not g.get('finished') and g.get('state')!='post']
     if not games:st.info('No live or upcoming matches returned for this date. Finished matches are hidden.');return
     search=st.text_input('Find today’s team or competition',key='daily_fixture_search')
+    day_key = chosen.isoformat()
+    marked = st.session_state.get('fanduel_ny_shortlist', {}).get(day_key, set())
+    shortlist_only = st.checkbox('FanDuel NY shortlist only', key='daily_fanduel_only',
+                                 help='Shows matches you marked in this session. Availability is not checked automatically.')
+    if shortlist_only:
+        games = [g for g in games if str(g['id']) in marked]
+        if not games:
+            st.info('No matches marked for this date. Turn off the filter, select a match, and mark it after checking FanDuel.')
+            return
     visible=[g for g in games if search.casefold() in (g['matchLabel']+' '+g['competitionLabel']).casefold()]
     if not visible:st.info('No matches match this search.');return
     live=[g for g in visible if g['state']=='in']
@@ -135,6 +153,10 @@ def render_daily_fixtures():
     selected=st.selectbox('Match details / open league board',list(lookup),format_func=match_label,key='daily_match_detail')
     game=lookup[selected]
     pregame=game.get('state')=='pre' and parse_time(game['kickoff_time'])>now
+    if pregame or selected in marked:
+        st.button('Remove from FanDuel NY shortlist' if selected in marked else 'Mark Anytime Goalscorer available',
+                  key='daily_fanduel_mark', on_click=toggle_fanduel_match, args=(day_key, selected),
+                  help='Mark only after you see the Anytime Goalscorer market in your FanDuel NY app. Moneyline alone does not count.')
     st.button('View scorer board', key='daily_scorer_shortcut', disabled=not pregame,
               on_click=open_scorer_board, args=(game,chosen),
               help='Open this exact upcoming match. Player forecasts depend on competition coverage.')

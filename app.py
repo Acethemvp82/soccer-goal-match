@@ -37,7 +37,7 @@ from model import parse_time, rank_slate
 from match_observations import priced_record_issue
 import daily_fixtures as _daily_fixtures
 import daily_fixtures_ui as _daily_fixtures_ui
-if getattr(_daily_fixtures_ui, 'BUILD_ID', None) != 'scorer-shortcut-1':
+if getattr(_daily_fixtures_ui, 'BUILD_ID', None) != 'fanduel-ny-shortlist-1':
     importlib.reload(_daily_fixtures)
     importlib.reload(_daily_fixtures_ui)
     _daily_fixtures_ui.load_daily.clear()
